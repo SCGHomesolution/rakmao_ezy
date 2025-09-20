@@ -309,15 +309,20 @@
                     document.getElementById('countdownMessage').innerHTML = 
                         '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
                     
-                    // รอ 2 วินาที แล้วปิดหน้าต่าง
+                    // รอ 2 วินาที แล้วแสดงตัวเลือก
                     setTimeout(() => {
-                        document.getElementById('countdownMessage').innerHTML = 
-                            '<span class="success">กำลังปิดหน้าต่าง...</span>';
+                        document.getElementById('countdownMessage').innerHTML = `
+                            <div class="success">เชื่อมข้อมูลสำเร็จแล้ว</div>
+                            <div style="margin-top: 15px;">
+                                <button onclick="closeLiff()" style="background:#00c851;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;margin:5px;font-size:14px;">← กลับ</button>
+                                <button onclick="openGlideApp()" style="background:#007bff;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;margin:5px;font-size:14px;">เปิดแอป</button>
+                            </div>
+                        `;
                         
-                        // ปิดหน้าต่าง LIFF
+                        // ลองกลับอัตโนมัติหลัง 3 วินาที
                         setTimeout(() => {
                             closeLiff();
-                        }, 1000);
+                        }, 3000);
                         
                     }, 2000);
                     
@@ -338,11 +343,56 @@
             }
         }
         
+        function openGlideApp() {
+            try {
+                console.log('Opening Glide App...');
+                const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
+                
+                if (liff && liff.isInClient()) {
+                    // ใช้ liff.openWindow() เพื่อเปิด Glide App
+                    liff.openWindow({
+                        url: glideAppUrl,
+                        external: false
+                    });
+                } else {
+                    // สำหรับ external browser
+                    window.open(glideAppUrl, '_blank');
+                }
+                
+                // แล้วลองกลับหน้าก่อน
+                setTimeout(() => {
+                    closeLiff();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error opening Glide App:', error);
+            }
+        }
+        
         function closeLiff() {
-            if (liff.isInClient()) {
-                liff.closeWindow();
-            } else {
-                window.close();
+            try {
+                // ตรวจสอบว่ามี history ย้อนกลับได้หรือไม่
+                if (window.history.length > 1) {
+                    console.log('Going back to previous page...');
+                    window.history.back();
+                    return;
+                }
+                
+                // ลองใช้ liff.closeWindow() สำหรับ nested LIFF
+                if (liff && liff.isInClient()) {
+                    console.log('Attempting to close nested LIFF...');
+                    liff.closeWindow();
+                    return;
+                }
+                
+                // ถ้าไม่ได้ทั้งหมด แสดงข้อความ
+                document.getElementById('countdownMessage').innerHTML = 
+                    '<span class="success">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์</span>';
+                    
+            } catch (error) {
+                console.error('Error closing LIFF:', error);
+                document.getElementById('countdownMessage').innerHTML = 
+                    '<span class="success">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์</span>';
             }
         }
         
@@ -424,6 +474,11 @@
                 }, 1000);
             }
         });
+        
+        // ทำให้ functions เป็น global
+        window.closeLiff = closeLiff;
+        window.openGlideApp = openGlideApp;
+        window.sendToGlideAPI = sendToGlideAPI;
         
         // Global error handler
         window.addEventListener('error', function(e) {
