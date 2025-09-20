@@ -309,22 +309,25 @@
                     document.getElementById('countdownMessage').innerHTML = 
                         '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
                     
-                    // รอ 2 วินาที แล้วแสดงตัวเลือก
+                    // รอ 1 วินาที แล้วแสดงปุ่มใหญ่ๆ
                     setTimeout(() => {
                         document.getElementById('countdownMessage').innerHTML = `
-                            <div class="success">เชื่อมข้อมูลสำเร็จแล้ว</div>
-                            <div style="margin-top: 15px;">
-                                <button onclick="closeLiff()" style="background:#00c851;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;margin:5px;font-size:14px;">← กลับ</button>
-                                <button onclick="openGlideApp()" style="background:#007bff;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;margin:5px;font-size:14px;">เปิดแอป</button>
-                            </div>
+                            <div class="success" style="margin-bottom: 20px;">เชื่อมข้อมูลสำเร็จแล้ว</div>
+                            <button onclick="goBackToGlide()" style="
+                                background: #00c851;
+                                color: white;
+                                border: none;
+                                padding: 20px 40px;
+                                border-radius: 12px;
+                                cursor: pointer;
+                                font-size: 18px;
+                                font-weight: bold;
+                                width: 100%;
+                                box-shadow: 0 4px 8px rgba(0,200,81,0.3);
+                            ">กลับไปแอป</button>
                         `;
                         
-                        // ลองกลับอัตโนมัติหลัง 3 วินาที
-                        setTimeout(() => {
-                            closeLiff();
-                        }, 3000);
-                        
-                    }, 2000);
+                    }, 1000);
                     
                 } else {
                     throw new Error(`API Error: ${response.status} ${response.statusText}`);
