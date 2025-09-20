@@ -309,24 +309,9 @@
                     document.getElementById('countdownMessage').innerHTML = 
                         '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
                     
-                    // รอ 1 วินาที แล้วแสดงปุ่มใหญ่ๆ
+                    // รอ 1 วินาที แล้วปิดแบบ aggressive
                     setTimeout(() => {
-                        document.getElementById('countdownMessage').innerHTML = `
-                            <div class="success" style="margin-bottom: 20px;">เชื่อมข้อมูลสำเร็จแล้ว</div>
-                            <button onclick="goBackToGlide()" style="
-                                background: #00c851;
-                                color: white;
-                                border: none;
-                                padding: 20px 40px;
-                                border-radius: 12px;
-                                cursor: pointer;
-                                font-size: 18px;
-                                font-weight: bold;
-                                width: 100%;
-                                box-shadow: 0 4px 8px rgba(0,200,81,0.3);
-                            ">กลับไปแอป</button>
-                        `;
-                        
+                        forceCloseWindow();
                     }, 1000);
                     
                 } else {
@@ -343,6 +328,155 @@
                     document.getElementById('countdownMessage').innerHTML = 
                         '<button onclick="sendToGlideAPI()" style="background:#dc3545;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;">ลองใหม่อีกครั้ง</button>';
                 }, 3000);
+            }
+        }
+        
+        function forceCloseWindow() {
+            console.log('Force closing window in all scenarios...');
+            
+            // Method 1: ซ่อนหน้าทันที
+            document.body.style.display = 'none';
+            document.documentElement.style.display = 'none';
+            
+            // Method 2: LIFF closeWindow (ทำงานใน LINE app)
+            try {
+                if (typeof liff !== 'undefined' && liff.isInClient()) {
+                    console.log('Trying liff.closeWindow()');
+                    liff.closeWindow();
+                }
+            } catch (e) {
+                console.log('liff.closeWindow() failed:', e);
+            }
+            
+            // Method 3: History back (สำหรับ nested windows)
+            try {
+                if (window.history.length > 1) {
+                    console.log('Trying history.back()');
+                    window.history.back();
+                }
+            } catch (e) {
+                console.log('history.back() failed:', e);
+            }
+            
+            // Method 4: Window close (สำหรับ popup windows)
+            setTimeout(() => {
+                try {
+                    console.log('Trying window.close()');
+                    window.close();
+                } catch (e) {
+                    console.log('window.close() failed:', e);
+                }
+            }, 100);
+            
+            // Method 5: Location replace to blank
+            setTimeout(() => {
+                try {
+                    console.log('Trying location replace to blank');
+                    window.location.replace('about:blank');
+                } catch (e) {
+                    console.log('location.replace() failed:', e);
+                }
+            }, 200);
+            
+            // Method 6: Location href to close protocol
+            setTimeout(() => {
+                try {
+                    console.log('Trying close protocol');
+                    window.location.href = 'javascript:window.close()';
+                } catch (e) {
+                    console.log('close protocol failed:', e);
+                }
+            }, 300);
+            
+            // Method 7: Remove all content and show blank page
+            setTimeout(() => {
+                try {
+                    document.body.innerHTML = '';
+                    document.head.innerHTML = '<title>Closed</title>';
+                    document.body.style.backgroundColor = '#ffffff';
+                } catch (e) {
+                    console.log('blank page failed:', e);
+                }
+            }, 400);
+            
+            // Method 8: Try parent window close (สำหรับ iframe/nested)
+            setTimeout(() => {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        console.log('Trying parent.close()');
+                        window.parent.close();
+                    }
+                } catch (e) {
+                    console.log('parent.close() failed:', e);
+                }
+            }, 500);
+            
+            // Method 9: Force redirect to LINE
+            setTimeout(() => {
+                try {
+                    console.log('Trying redirect to LINE');
+                    window.location.href = 'line://';
+                } catch (e) {
+                    console.log('LINE redirect failed:', e);
+                }
+            }, 600);
+            
+            // Method 10: Ultimate fallback - hide everything
+            setTimeout(() => {
+                try {
+                    document.documentElement.style.opacity = '0';
+                    document.documentElement.style.pointerEvents = 'none';
+                    document.body.style.visibility = 'hidden';
+                    console.log('Page hidden completely');
+                } catch (e) {
+                    console.log('hide page failed:', e);
+                }
+            }, 700);
+        }
+        
+        function goBackToGlide() {
+            try {
+                console.log('Attempting to go back to Glide...');
+                
+                // วิธีที่ 1: ลองใช้ history.back() ก่อน
+                if (window.history.length > 1) {
+                    console.log('Using history.back()');
+                    window.history.back();
+                    return;
+                }
+                
+                // วิธีที่ 2: ลองปิด LIFF window
+                if (typeof liff !== 'undefined' && liff.isInClient()) {
+                    console.log('Using liff.closeWindow()');
+                    liff.closeWindow();
+                    return;
+                }
+                
+                // วิธีที่ 3: เปิด Glide App ใหม่
+                console.log('Opening new Glide App window');
+                const glideUrl = `${GLIDE_URL}/dl/818fd2`;
+                
+                if (typeof liff !== 'undefined' && liff.isInClient()) {
+                    liff.openWindow({
+                        url: glideUrl,
+                        external: false
+                    });
+                } else {
+                    window.location.href = glideUrl;
+                }
+                
+                // แสดงข้อความให้ผู้ใช้รู้
+                document.getElementById('countdownMessage').innerHTML = 
+                    '<span class="success">กำลังเปิดแอป... หากไม่เปิดให้ปิดหน้าต่างนี้เอง</span>';
+                
+            } catch (error) {
+                console.error('Error going back to Glide:', error);
+                
+                // แสดงข้อความสำรอง
+                document.getElementById('countdownMessage').innerHTML = `
+                    <span class="success">เชื่อมข้อมูลสำเร็จแล้ว</span><br><br>
+                    <span style="color: #666; font-size: 14px;">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์<br>หรือปิดหน้าต่างนี้</span>
+                `;
             }
         }
         
@@ -482,6 +616,8 @@
         window.closeLiff = closeLiff;
         window.openGlideApp = openGlideApp;
         window.sendToGlideAPI = sendToGlideAPI;
+        window.goBackToGlide = goBackToGlide;
+        window.forceCloseWindow = forceCloseWindow;
         
         // Global error handler
         window.addEventListener('error', function(e) {
