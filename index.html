@@ -151,14 +151,13 @@
             font-weight: bold;
         }
         
-        .redirect-url {
+        .status-info {
             background: #f8f9fa;
             border-radius: 8px;
             padding: 15px;
             margin: 20px 0;
-            font-size: 12px;
-            word-break: break-all;
-            text-align: left;
+            font-size: 14px;
+            text-align: center;
             color: #333;
             border-left: 4px solid #00c851;
         }
@@ -186,11 +185,11 @@
             <div id="userId" class="user-id"></div>
             
             <div class="message" style="margin-bottom: 20px;">
-                ยืนยันการเข้าสู่แอปพลิเคชัน?
+                ยืนยันการเชื่อมข้อมูล?
             </div>
             
             <button id="confirmBtn" class="confirm-btn">
-                เข้าสู่แอปพลิเคชัน
+                ยืนยันการเชื่อมข้อมูล
             </button>
             
             <button id="cancelBtn" class="cancel-btn">
@@ -201,10 +200,10 @@
         <!-- Redirect Info State -->
         <div id="redirectInfo" class="redirect-info">
             <div class="spinner"></div>
-            <div id="redirectMessage" class="message redirecting">กำลังเตรียมเปลี่ยนเส้นทาง...</div>
+            <div id="redirectMessage" class="message redirecting">กำลังเตรียมเชื่อมข้อมูล...</div>
             
-            <div class="url-label">จะไปยัง URL:</div>
-            <div id="redirectUrl" class="redirect-url"></div>
+            <div class="url-label">สถานะ:</div>
+            <div id="redirectUrl" class="status-info"></div>
             
             <div id="countdownMessage" class="message"></div>
         </div>
@@ -237,8 +236,8 @@
             document.getElementById('redirectInfo').style.display = 'none';
         }
         
-        function showRedirectInfo(url) {
-            document.getElementById('redirectUrl').textContent = url;
+        function showRedirectInfo(message) {
+            document.getElementById('redirectUrl').textContent = message;
             document.getElementById('loading').style.display = 'none';
             document.getElementById('userInfo').style.display = 'none';
             document.getElementById('redirectInfo').style.display = 'block';
@@ -251,7 +250,7 @@
             }
             
             // แสดงหน้า redirect info
-            showRedirectInfo('กำลังส่งข้อมูลไปยัง Glide App...');
+            showRedirectInfo('กำลังเชื่อมข้อมูลกับ Glide App...');
             
             // เรียก API ไปยัง Glide
             sendToGlideAPI();
@@ -298,23 +297,18 @@
                     console.log('API Success:', result);
                     
                     document.getElementById('countdownMessage').innerHTML = 
-                        '<span class="success">✅ บันทึกข้อมูลสำเร็จ!</span>';
+                        '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
                     
-                    // รอ 2 วินาที แล้ว redirect ไป Glide App
+                    // รอ 2 วินาที แล้วปิดหน้าต่าง
                     setTimeout(() => {
                         document.getElementById('countdownMessage').innerHTML = 
-                            '<span class="redirecting">กำลังเปิดแอปพลิเคชัน...</span>';
+                            '<span class="success">กำลังปิดหน้าต่าง...</span>';
                         
-                        const redirectUrl = `${GLIDE_URL}/dl/818fd2`;
+                        // ปิดหน้าต่าง LIFF
+                        setTimeout(() => {
+                            closeLiff();
+                        }, 1000);
                         
-                        if (liff.isInClient()) {
-                            liff.openWindow({
-                                url: redirectUrl,
-                                external: false
-                            });
-                        } else {
-                            window.location.href = redirectUrl;
-                        }
                     }, 2000);
                     
                 } else {
