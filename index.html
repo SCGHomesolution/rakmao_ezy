@@ -40,6 +40,28 @@
             display: none;
         }
         
+        .debug-info {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            font-size: 12px;
+            word-break: break-all;
+        }
+        
+        .debug-toggle {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        
         .spinner {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #00c851;
@@ -150,6 +172,15 @@
 </head>
 <body>
     <div class="container">
+        <!-- Debug Toggle -->
+        <button id="debugToggle" class="debug-toggle">🐛 Show Debug</button>
+        
+        <!-- Debug Info -->
+        <div id="debugInfo" class="debug-info">
+            <strong>Debug Information:</strong><br>
+            <div id="debugContent"></div>
+        </div>
+        
         <!-- Loading State -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
@@ -181,15 +212,26 @@
         const GLIDE_URL = 'https://ezyrfq.glide.page';
         
         let userProfile = null;
+        let debugMode = false;
+        
+        function addDebugLog(message) {
+            const debugContent = document.getElementById('debugContent');
+            const timestamp = new Date().toLocaleTimeString();
+            debugContent.innerHTML += `<br>[${timestamp}] ${message}`;
+            console.log(`[DEBUG] ${message}`);
+        }
         
         function showLoading(message) {
             document.getElementById('loadingMessage').textContent = message;
             document.getElementById('loading').style.display = 'block';
             document.getElementById('userInfo').style.display = 'none';
+            addDebugLog(`Loading: ${message}`);
         }
         
         function showUserInfo(profile) {
             userProfile = profile;
+            
+            addDebugLog(`Profile loaded: ${JSON.stringify(profile, null, 2)}`);
             
             // แสดงข้อมูลผู้ใช้
             document.getElementById('profileImage').src = profile.pictureUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
@@ -202,18 +244,31 @@
         }
         
         function redirectToApp() {
-            if (!userProfile) return;
+            if (!userProfile) {
+                addDebugLog('ERROR: No user profile found');
+                return;
+            }
             
             showLoading('กำลังเปลี่ยนเส้นทาง...');
             
-            const params = new URLSearchParams({
+            // บันทึกข้อมูลไว้ใน localStorage ก่อน redirect
+            const userDataForGlide = {
                 userId: userProfile.userId,
                 name: userProfile.displayName || '',
                 picture: userProfile.pictureUrl || '',
                 timestamp: Date.now()
-            });
+            };
             
-            const redirectUrl = `${GLIDE_URL}?${params.toString()}`;
+            try {
+                localStorage.setItem('lineUserProfile', JSON.stringify(userDataForGlide));
+                addDebugLog('User data saved to localStorage');
+            } catch (e) {
+                addDebugLog('Failed to save to localStorage: ' + e.message);
+            }
+            
+            const params = new URLSearchParams(userDataForGlide);
+            const redirectUrl = `${GLIDE_URL}#${params.toString()}`;
+            addDebugLog(`Redirect URL: ${redirectUrl}`);
             
             // แสดง countdown
             let countdown = 3;
@@ -225,12 +280,37 @@
                 
                 if (countdown < 0) {
                     clearInterval(countdownInterval);
-                    window.location.href = redirectUrl;
+                    addDebugLog('Redirecting now...');
+                    
+                    // แสดง URL ที่จะ redirect ไป
+                    document.getElementById('loadingMessage').innerHTML = 
+                        `<div class="redirecting">กำลังไป...<br><small style="font-size:12px;word-break:break-all;">${redirectUrl}</small></div>`;
+                    
+                    // ลองใช้วิธีการ redirect หลายแบบพร้อมกัน
+                    if (liff.isInClient()) {
+                        // สำหรับ LINE Internal Browser
+                        addDebugLog('Using liff.openWindow for internal browser');
+                        liff.openWindow({
+                            url: redirectUrl,
+                            external: false
+                        });
+                    } else {
+                        // สำหรับ External Browser
+                        addDebugLog('Using window.location for external browser');
+                        window.location.href = redirectUrl;
+                    }
+                    
+                    // Backup: ลองใช้ window.location.replace
+                    setTimeout(() => {
+                        addDebugLog('Backup redirect using window.location.replace');
+                        window.location.replace(redirectUrl);
+                    }, 2000);
                 }
             }, 1000);
         }
         
         function closeLiff() {
+            addDebugLog('Closing LIFF window');
             if (liff.isInClient()) {
                 liff.closeWindow();
             } else {
@@ -238,8 +318,36 @@
             }
         }
         
-        async function main() {
+        async function handleLoginState() {
             try {
+                addDebugLog('Checking login state...');
+                
+                if (!liff.isLoggedIn()) {
+                    addDebugLog('User not logged in, redirecting to login...');
+                    showLoading('กำลังเข้าสู่ระบบ LINE...');
+                    liff.login();
+                    return false;
+                }
+                
+                addDebugLog('User is logged in, getting profile...');
+                showLoading('กำลังดึงข้อมูลโปรไฟล์...');
+                
+                const profile = await liff.getProfile();
+                showUserInfo(profile);
+                return true;
+                
+            } catch (error) {
+                addDebugLog(`Login state error: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        async function initializeLiff() {
+            try {
+                addDebugLog(`Initializing LIFF with ID: ${LIFF_ID}`);
+                addDebugLog(`Current URL: ${window.location.href}`);
+                addDebugLog(`User Agent: ${navigator.userAgent}`);
+                
                 showLoading('กำลังเริ่มต้น LIFF...');
                 
                 // ตรวจสอบว่า LIFF SDK โหลดแล้วหรือไม่
@@ -248,50 +356,98 @@
                 }
                 
                 await liff.init({ liffId: LIFF_ID });
+                addDebugLog('LIFF initialized successfully');
                 
-                if (!liff.isLoggedIn()) {
-                    showLoading('กำลังเข้าสู่ระบบ LINE...');
-                    liff.login();
-                    return;
-                }
-
-                showLoading('กำลังดึงข้อมูลโปรไฟล์...');
-                const profile = await liff.getProfile();
+                // ตรวจสอบสภาพแวดล้อม
+                addDebugLog(`Is in client: ${liff.isInClient()}`);
+                addDebugLog(`LIFF version: ${liff.getVersion()}`);
+                addDebugLog(`OS: ${liff.getOS()}`);
                 
-                // แสดงข้อมูลผู้ใช้
-                showUserInfo(profile);
+                await handleLoginState();
                 
             } catch (error) {
+                addDebugLog(`LIFF initialization error: ${error.message}`);
                 console.error('LIFF Error:', error);
+                
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('userInfo').style.display = 'none';
                 document.getElementById('loadingMessage').innerHTML = 
-                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>กรุณาลองใหม่อีกครั้ง`;
+                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>กรุณาตรวจสอบ Debug Information`;
             }
         }
         
         // Event Listeners
         document.addEventListener('DOMContentLoaded', function() {
+            addDebugLog('DOM Content Loaded');
+            
+            // Debug Toggle
+            document.getElementById('debugToggle').addEventListener('click', function() {
+                debugMode = !debugMode;
+                const debugInfo = document.getElementById('debugInfo');
+                if (debugMode) {
+                    debugInfo.style.display = 'block';
+                    this.textContent = '🐛 Hide Debug';
+                } else {
+                    debugInfo.style.display = 'none';
+                    this.textContent = '🐛 Show Debug';
+                }
+            });
+            
             // ปุ่มยืนยัน
             document.getElementById('confirmBtn').addEventListener('click', function() {
+                addDebugLog('Confirm button clicked');
                 this.disabled = true;
                 redirectToApp();
             });
             
             // ปุ่มยกเลิก
             document.getElementById('cancelBtn').addEventListener('click', function() {
+                addDebugLog('Cancel button clicked');
                 closeLiff();
             });
             
             // เริ่มต้น LIFF
-            main();
+            initializeLiff();
         });
         
-        // Handle errors
+        // Handle page visibility change (สำหรับกรณีที่กลับมาจาก login)
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && typeof liff !== 'undefined') {
+                addDebugLog('Page became visible, checking login state...');
+                setTimeout(() => {
+                    if (liff.isLoggedIn()) {
+                        handleLoginState();
+                    }
+                }, 1000);
+            }
+        });
+        
+        // Handle window focus (backup สำหรับกรณีที่กลับมาจาก login)
+        window.addEventListener('focus', function() {
+            if (typeof liff !== 'undefined') {
+                addDebugLog('Window focused, checking login state...');
+                setTimeout(() => {
+                    if (liff.isLoggedIn()) {
+                        handleLoginState();
+                    }
+                }, 1000);
+            }
+        });
+        
+        // Global error handler
         window.addEventListener('error', function(e) {
+            addDebugLog(`Global error: ${e.error?.message || e.message}`);
             console.error('Global Error:', e.error);
-            document.getElementById('loadingMessage').innerHTML = 
-                `<span class="error">เกิดข้อผิดพลาดในการโหลดหน้าเว็บ</span>`;
+        });
+        
+        // เพิ่ม URL parameters ใน debug info เมื่อโหลดหน้า
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const params = {};
+            for (const [key, value] of urlParams) {
+                params[key] = value;
+            }
+            addDebugLog(`URL Parameters: ${JSON.stringify(params, null, 2)}`);
         });
     </script>
 </body>
