@@ -225,10 +225,14 @@
         function showUserInfo(profile) {
             userProfile = profile;
             
+            // ดึงค่า rowid จาก URL เพื่อแสดงให้ผู้ใช้เห็น
+            const urlParams = new URLSearchParams(window.location.search);
+            const rowId = urlParams.get('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
+            
             // แสดงข้อมูลผู้ใช้
             document.getElementById('profileImage').src = profile.pictureUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
             document.getElementById('userName').textContent = profile.displayName || 'ไม่ระบุชื่อ';
-            document.getElementById('userId').textContent = `User ID: ${profile.userId}`;
+            document.getElementById('userId').innerHTML = `User ID: ${profile.userId}<br><small style="color: #999; font-size: 12px;">Row ID: ${rowId}</small>`;
             
             // ซ่อน loading และแสดง user info
             document.getElementById('loading').style.display = 'none';
@@ -265,6 +269,12 @@
                 const userName = userProfile.displayName || '';
                 const profileImg = userProfile.pictureUrl || '';
                 
+                // ดึงค่า rowid จาก URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const rowId = urlParams.get('rowid') || 'DT-ZC65iTlGfaqW9Ix391g'; // fallback ถ้าไม่มี rowid
+                
+                console.log('Using Row ID:', rowId);
+                
                 // สร้าง API payload
                 const apiPayload = {
                     "appID": "wFtUtanipzHwHsjbHCij",
@@ -277,7 +287,7 @@
                                 "jtoSZ": userName,      // line_name  
                                 "ivZXQ": profileImg     // line_img
                             },
-                            "rowID": "DT-ZC65iTlGfaqW9Ix391g" // Fixed Row ID
+                            "rowID": rowId // ใช้ rowID จาก URL parameter
                         }
                     ]
                 };
