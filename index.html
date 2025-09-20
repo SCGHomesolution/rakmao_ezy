@@ -255,12 +255,15 @@
             const userName = userProfile.displayName || '';
             const profileImg = userProfile.pictureUrl || '';
             
-            // สร้าง template string ในรูปแบบ {{userid,username,profileimg}}
-            // แต่ encode แต่ละส่วนเพื่อป้องกันปัญหา comma
-            const templateData = `{{${encodeURIComponent(userId)},${encodeURIComponent(userName)},${encodeURIComponent(profileImg)}}}`;
+            // วิธีที่ 2: ใช้ Base64 encoding (ปลอดภัยกว่า)
+            const userData = {
+                userId: userId,
+                userName: userName,
+                profileImg: profileImg
+            };
             
-            // สร้าง URL ในรูปแบบใหม่
-            const redirectUrl = `${GLIDE_URL}/dl/818fd2?id=${encodeURIComponent(templateData)}`;
+            const base64Data = btoa(JSON.stringify(userData));
+            const redirectUrl = `${GLIDE_URL}/dl/818fd2?id=${base64Data}`;
             
             // บันทึกข้อมูลไว้ใน localStorage ก่อน redirect (สำรอง)
             const userDataForGlide = {
