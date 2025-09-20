@@ -1,46 +1,298 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LINE LIFF Bridge</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #00c851, #00ff41);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .loading {
+            display: block;
+        }
+        
+        .user-info {
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00c851;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .profile-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 20px;
+            border: 4px solid #00c851;
+            display: block;
+        }
+        
+        .user-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .user-id {
+            font-size: 14px;
+            color: #666;
+            background: #f5f5f5;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            word-break: break-all;
+        }
+        
+        .confirm-btn {
+            background: #00c851;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 15px;
+            transition: background 0.3s;
+        }
+        
+        .confirm-btn:hover {
+            background: #00a844;
+        }
+        
+        .confirm-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .cancel-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.3s;
+        }
+        
+        .cancel-btn:hover {
+            background: #c82333;
+        }
+        
+        .message {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .success {
+            color: #00c851;
+            font-weight: bold;
+        }
+        
+        .redirecting {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        
+        .countdown {
+            font-size: 20px;
+            color: #00c851;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <div id="loading">กำลังโหลด...</div>
+    <div class="container">
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <div id="loadingMessage" class="message">กำลังเชื่อมต่อกับ LINE...</div>
+        </div>
+        
+        <!-- User Info State -->
+        <div id="userInfo" class="user-info">
+            <img id="profileImage" class="profile-image" src="" alt="Profile Picture">
+            <div id="userName" class="user-name"></div>
+            <div id="userId" class="user-id"></div>
+            
+            <div class="message" style="margin-bottom: 20px;">
+                ยืนยันการเข้าสู่แอปพลิเคชัน?
+            </div>
+            
+            <button id="confirmBtn" class="confirm-btn">
+                เข้าสู่แอปพลิเคชัน
+            </button>
+            
+            <button id="cancelBtn" class="cancel-btn">
+                ยกเลิก
+            </button>
+        </div>
+    </div>
     
     <script>
         const LIFF_ID = '2008146540-vb4OMaMV';
         const GLIDE_URL = 'https://ezyrfq.glide.page';
         
+        let userProfile = null;
+        
+        function showLoading(message) {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+        }
+        
+        function showUserInfo(profile) {
+            userProfile = profile;
+            
+            // แสดงข้อมูลผู้ใช้
+            document.getElementById('profileImage').src = profile.pictureUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
+            document.getElementById('userName').textContent = profile.displayName || 'ไม่ระบุชื่อ';
+            document.getElementById('userId').textContent = `User ID: ${profile.userId}`;
+            
+            // ซ่อน loading และแสดง user info
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'block';
+        }
+        
+        function redirectToApp() {
+            if (!userProfile) return;
+            
+            showLoading('กำลังเปลี่ยนเส้นทาง...');
+            
+            const params = new URLSearchParams({
+                userId: userProfile.userId,
+                name: userProfile.displayName || '',
+                picture: userProfile.pictureUrl || '',
+                timestamp: Date.now()
+            });
+            
+            const redirectUrl = `${GLIDE_URL}?${params.toString()}`;
+            
+            // แสดง countdown
+            let countdown = 3;
+            const countdownInterval = setInterval(() => {
+                document.getElementById('loadingMessage').innerHTML = 
+                    `กำลังเปลี่ยนเส้นทางใน <span class="countdown">${countdown}</span> วินาที...`;
+                
+                countdown--;
+                
+                if (countdown < 0) {
+                    clearInterval(countdownInterval);
+                    window.location.href = redirectUrl;
+                }
+            }, 1000);
+        }
+        
+        function closeLiff() {
+            if (liff.isInClient()) {
+                liff.closeWindow();
+            } else {
+                window.close();
+            }
+        }
+        
         async function main() {
             try {
+                showLoading('กำลังเริ่มต้น LIFF...');
+                
+                // ตรวจสอบว่า LIFF SDK โหลดแล้วหรือไม่
+                if (typeof liff === 'undefined') {
+                    throw new Error('LIFF SDK ไม่สามารถโหลดได้');
+                }
+                
                 await liff.init({ liffId: LIFF_ID });
                 
                 if (!liff.isLoggedIn()) {
+                    showLoading('กำลังเข้าสู่ระบบ LINE...');
                     liff.login();
                     return;
                 }
 
+                showLoading('กำลังดึงข้อมูลโปรไฟล์...');
                 const profile = await liff.getProfile();
                 
-                // สร้าง URL พร้อม parameters
-                const params = new URLSearchParams({
-                    userId: profile.userId,
-                    name: profile.displayName,
-                    picture: profile.pictureUrl || '',
-                    timestamp: Date.now()
-                });
-                
-                window.location.href = `${GLIDE_URL}?${params}`;
+                // แสดงข้อมูลผู้ใช้
+                showUserInfo(profile);
                 
             } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('loading').innerText = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+                console.error('LIFF Error:', error);
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('loadingMessage').innerHTML = 
+                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>กรุณาลองใหม่อีกครั้ง`;
             }
         }
-
-        window.onload = main;
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // ปุ่มยืนยัน
+            document.getElementById('confirmBtn').addEventListener('click', function() {
+                this.disabled = true;
+                redirectToApp();
+            });
+            
+            // ปุ่มยกเลิก
+            document.getElementById('cancelBtn').addEventListener('click', function() {
+                closeLiff();
+            });
+            
+            // เริ่มต้น LIFF
+            main();
+        });
+        
+        // Handle errors
+        window.addEventListener('error', function(e) {
+            console.error('Global Error:', e.error);
+            document.getElementById('loadingMessage').innerHTML = 
+                `<span class="error">เกิดข้อผิดพลาดในการโหลดหน้าเว็บ</span>`;
+        });
     </script>
 </body>
 </html>
