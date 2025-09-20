@@ -40,26 +40,8 @@
             display: none;
         }
         
-        .debug-info {
+        .redirect-info {
             display: none;
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px 0;
-            text-align: left;
-            font-size: 12px;
-            word-break: break-all;
-        }
-        
-        .debug-toggle {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 12px;
-            margin-bottom: 10px;
-            cursor: pointer;
         }
         
         .spinner {
@@ -168,19 +150,29 @@
             color: #00c851;
             font-weight: bold;
         }
+        
+        .redirect-url {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 12px;
+            word-break: break-all;
+            text-align: left;
+            color: #333;
+            border-left: 4px solid #00c851;
+        }
+        
+        .url-label {
+            font-weight: bold;
+            color: #00c851;
+            margin-bottom: 8px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Debug Toggle -->
-        <button id="debugToggle" class="debug-toggle">🐛 Show Debug</button>
-        
-        <!-- Debug Info -->
-        <div id="debugInfo" class="debug-info">
-            <strong>Debug Information:</strong><br>
-            <div id="debugContent"></div>
-        </div>
-        
         <!-- Loading State -->
         <div id="loading" class="loading">
             <div class="spinner"></div>
@@ -205,6 +197,17 @@
                 ยกเลิก
             </button>
         </div>
+        
+        <!-- Redirect Info State -->
+        <div id="redirectInfo" class="redirect-info">
+            <div class="spinner"></div>
+            <div id="redirectMessage" class="message redirecting">กำลังเตรียมเปลี่ยนเส้นทาง...</div>
+            
+            <div class="url-label">จะไปยัง URL:</div>
+            <div id="redirectUrl" class="redirect-url"></div>
+            
+            <div id="countdownMessage" class="message"></div>
+        </div>
     </div>
     
     <script>
@@ -212,26 +215,16 @@
         const GLIDE_URL = 'https://ezyrfq.glide.page';
         
         let userProfile = null;
-        let debugMode = false;
-        
-        function addDebugLog(message) {
-            const debugContent = document.getElementById('debugContent');
-            const timestamp = new Date().toLocaleTimeString();
-            debugContent.innerHTML += `<br>[${timestamp}] ${message}`;
-            console.log(`[DEBUG] ${message}`);
-        }
         
         function showLoading(message) {
             document.getElementById('loadingMessage').textContent = message;
             document.getElementById('loading').style.display = 'block';
             document.getElementById('userInfo').style.display = 'none';
-            addDebugLog(`Loading: ${message}`);
+            document.getElementById('redirectInfo').style.display = 'none';
         }
         
         function showUserInfo(profile) {
             userProfile = profile;
-            
-            addDebugLog(`Profile loaded: ${JSON.stringify(profile, null, 2)}`);
             
             // แสดงข้อมูลผู้ใช้
             document.getElementById('profileImage').src = profile.pictureUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
@@ -241,15 +234,21 @@
             // ซ่อน loading และแสดง user info
             document.getElementById('loading').style.display = 'none';
             document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('redirectInfo').style.display = 'none';
+        }
+        
+        function showRedirectInfo(url) {
+            document.getElementById('redirectUrl').textContent = url;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'none';
+            document.getElementById('redirectInfo').style.display = 'block';
         }
         
         function redirectToApp() {
             if (!userProfile) {
-                addDebugLog('ERROR: No user profile found');
+                document.getElementById('loadingMessage').innerHTML = '<span class="error">ไม่พบข้อมูลผู้ใช้</span>';
                 return;
             }
-            
-            showLoading('กำลังเปลี่ยนเส้นทาง...');
             
             // สร้างข้อมูลในรูปแบบ template string
             const userId = userProfile.userId || '';
@@ -257,7 +256,8 @@
             const profileImg = userProfile.pictureUrl || '';
             
             // สร้าง template string ในรูปแบบ {{userid,username,profileimg}}
-            const templateData = `{{${userId},${userName},${profileImg}}}`;
+            // แต่ encode แต่ละส่วนเพื่อป้องกันปัญหา comma
+            const templateData = `{{${encodeURIComponent(userId)},${encodeURIComponent(userName)},${encodeURIComponent(profileImg)}}}`;
             
             // สร้าง URL ในรูปแบบใหม่
             const redirectUrl = `${GLIDE_URL}/dl/818fd2?id=${encodeURIComponent(templateData)}`;
@@ -273,47 +273,38 @@
             
             try {
                 localStorage.setItem('lineUserProfile', JSON.stringify(userDataForGlide));
-                addDebugLog('User data saved to localStorage');
             } catch (e) {
-                addDebugLog('Failed to save to localStorage: ' + e.message);
+                console.error('Failed to save to localStorage:', e);
             }
             
-            addDebugLog(`Template Data: ${templateData}`);
-            addDebugLog(`Redirect URL: ${redirectUrl}`);
+            // แสดงหน้า redirect info
+            showRedirectInfo(redirectUrl);
             
             // แสดง countdown
-            let countdown = 3;
+            let countdown = 5;
             const countdownInterval = setInterval(() => {
-                document.getElementById('loadingMessage').innerHTML = 
+                document.getElementById('countdownMessage').innerHTML = 
                     `กำลังเปลี่ยนเส้นทางใน <span class="countdown">${countdown}</span> วินาที...`;
                 
                 countdown--;
                 
                 if (countdown < 0) {
                     clearInterval(countdownInterval);
-                    addDebugLog('Redirecting now...');
-                    
-                    // แสดง URL ที่จะ redirect ไป
-                    document.getElementById('loadingMessage').innerHTML = 
-                        `<div class="redirecting">กำลังไป...<br><small style="font-size:12px;word-break:break-all;">${redirectUrl}</small></div>`;
+                    document.getElementById('countdownMessage').innerHTML = 
+                        '<span class="redirecting">กำลังเปลี่ยนเส้นทาง...</span>';
                     
                     // ลองใช้วิธีการ redirect หลายแบบพร้อมกัน
                     if (liff.isInClient()) {
-                        // สำหรับ LINE Internal Browser
-                        addDebugLog('Using liff.openWindow for internal browser');
                         liff.openWindow({
                             url: redirectUrl,
                             external: false
                         });
                     } else {
-                        // สำหรับ External Browser
-                        addDebugLog('Using window.location for external browser');
                         window.location.href = redirectUrl;
                     }
                     
                     // Backup: ลองใช้ window.location.replace
                     setTimeout(() => {
-                        addDebugLog('Backup redirect using window.location.replace');
                         window.location.replace(redirectUrl);
                     }, 2000);
                 }
@@ -321,7 +312,6 @@
         }
         
         function closeLiff() {
-            addDebugLog('Closing LIFF window');
             if (liff.isInClient()) {
                 liff.closeWindow();
             } else {
@@ -331,34 +321,24 @@
         
         async function handleLoginState() {
             try {
-                addDebugLog('Checking login state...');
-                
                 if (!liff.isLoggedIn()) {
-                    addDebugLog('User not logged in, redirecting to login...');
                     showLoading('กำลังเข้าสู่ระบบ LINE...');
                     liff.login();
                     return false;
                 }
                 
-                addDebugLog('User is logged in, getting profile...');
                 showLoading('กำลังดึงข้อมูลโปรไฟล์...');
-                
                 const profile = await liff.getProfile();
                 showUserInfo(profile);
                 return true;
                 
             } catch (error) {
-                addDebugLog(`Login state error: ${error.message}`);
                 throw error;
             }
         }
         
         async function initializeLiff() {
             try {
-                addDebugLog(`Initializing LIFF with ID: ${LIFF_ID}`);
-                addDebugLog(`Current URL: ${window.location.href}`);
-                addDebugLog(`User Agent: ${navigator.userAgent}`);
-                
                 showLoading('กำลังเริ่มต้น LIFF...');
                 
                 // ตรวจสอบว่า LIFF SDK โหลดแล้วหรือไม่
@@ -367,53 +347,28 @@
                 }
                 
                 await liff.init({ liffId: LIFF_ID });
-                addDebugLog('LIFF initialized successfully');
-                
-                // ตรวจสอบสภาพแวดล้อม
-                addDebugLog(`Is in client: ${liff.isInClient()}`);
-                addDebugLog(`LIFF version: ${liff.getVersion()}`);
-                addDebugLog(`OS: ${liff.getOS()}`);
-                
                 await handleLoginState();
                 
             } catch (error) {
-                addDebugLog(`LIFF initialization error: ${error.message}`);
                 console.error('LIFF Error:', error);
-                
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('redirectInfo').style.display = 'none';
                 document.getElementById('loadingMessage').innerHTML = 
-                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>กรุณาตรวจสอบ Debug Information`;
+                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>กรุณาลองใหม่อีกครั้ง`;
             }
         }
         
         // Event Listeners
         document.addEventListener('DOMContentLoaded', function() {
-            addDebugLog('DOM Content Loaded');
-            
-            // Debug Toggle
-            document.getElementById('debugToggle').addEventListener('click', function() {
-                debugMode = !debugMode;
-                const debugInfo = document.getElementById('debugInfo');
-                if (debugMode) {
-                    debugInfo.style.display = 'block';
-                    this.textContent = '🐛 Hide Debug';
-                } else {
-                    debugInfo.style.display = 'none';
-                    this.textContent = '🐛 Show Debug';
-                }
-            });
-            
             // ปุ่มยืนยัน
             document.getElementById('confirmBtn').addEventListener('click', function() {
-                addDebugLog('Confirm button clicked');
                 this.disabled = true;
                 redirectToApp();
             });
             
             // ปุ่มยกเลิก
             document.getElementById('cancelBtn').addEventListener('click', function() {
-                addDebugLog('Cancel button clicked');
                 closeLiff();
             });
             
@@ -424,7 +379,6 @@
         // Handle page visibility change (สำหรับกรณีที่กลับมาจาก login)
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden && typeof liff !== 'undefined') {
-                addDebugLog('Page became visible, checking login state...');
                 setTimeout(() => {
                     if (liff.isLoggedIn()) {
                         handleLoginState();
@@ -436,7 +390,6 @@
         // Handle window focus (backup สำหรับกรณีที่กลับมาจาก login)
         window.addEventListener('focus', function() {
             if (typeof liff !== 'undefined') {
-                addDebugLog('Window focused, checking login state...');
                 setTimeout(() => {
                     if (liff.isLoggedIn()) {
                         handleLoginState();
@@ -447,18 +400,7 @@
         
         // Global error handler
         window.addEventListener('error', function(e) {
-            addDebugLog(`Global error: ${e.error?.message || e.message}`);
             console.error('Global Error:', e.error);
-        });
-        
-        // เพิ่ม URL parameters ใน debug info เมื่อโหลดหน้า
-        window.addEventListener('load', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const params = {};
-            for (const [key, value] of urlParams) {
-                params[key] = value;
-            }
-            addDebugLog(`URL Parameters: ${JSON.stringify(params, null, 2)}`);
         });
     </script>
 </body>
