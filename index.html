@@ -6,89 +6,76 @@
   <title>LINE LIFF Bridge</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    /* ใช้ Prompt ด้วย @import — ต้องอยู่บรรทัดแรกใน <style> */
+    /* โหลดฟอนต์ Prompt */
     @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: 'Prompt', 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
-      background: linear-gradient(135deg, #00c851, #00ff41);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
+    body{
+      font-family: 'Prompt','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji';
+      background: linear-gradient(135deg,#00c851,#00ff41);
+      min-height: 100vh; display:flex; justify-content:center; align-items:center; padding:20px;
     }
 
-    /* บังคับให้ปุ่มใช้ฟอนต์ Prompt แน่นอน */
-    button, .confirm-btn, .cancel-btn {
-      font-family: 'Prompt', 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji' !important;
+    /* บังคับปุ่มใช้ฟอนต์ใหม่ */
+    button, .confirm-btn, .cancel-btn{
+      font-family: 'Prompt','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif,'Apple Color Emoji','Segoe UI Emoji' !important;
     }
 
-    .container {
-      background: #fff;
-      border-radius: 20px;
-      padding: 30px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-      max-width: 400px;
-      width: 100%;
-      text-align: center;
+    .container{
+      background:#fff; border-radius:20px; padding:30px;
+      box-shadow:0 10px 30px rgba(0,0,0,.2);
+      max-width:400px; width:100%; text-align:center;
     }
 
-    .loading { display: block; }
-    .user-info { display: none; }
-    .redirect-info { display: none; }
+    .loading{ display:block; }
+    .user-info{ display:none; }
+    .redirect-info{ display:none; }
 
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #00c851;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
+    .spinner{
+      border:4px solid #f3f3f3; border-top:4px solid #00c851;
+      border-radius:50%; width:50px; height:50px;
+      animation:spin 1s linear infinite; margin:0 auto 20px;
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes spin{ 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
 
-    .profile-image {
-      width: 100px; height: 100px; border-radius: 50%;
-      object-fit: cover; margin: 0 auto 20px; border: 4px solid #00c851; display: block;
+    .profile-image{
+      width:100px; height:100px; border-radius:50%;
+      object-fit:cover; margin:0 auto 20px; border:4px solid #00c851; display:block;
     }
 
-    .user-name { font-size: 24px; font-weight: 700; color: #333; margin-bottom: 10px; }
-    .user-id {
-      font-size: 14px; color: #666; background: #f5f5f5;
-      padding: 8px 12px; border-radius: 8px; margin-bottom: 30px; word-break: break-all;
+    .user-name{ font-size:24px; font-weight:700; color:#333; margin-bottom:10px; }
+    .user-id{
+      font-size:14px; color:#666; background:#f5f5f5;
+      padding:8px 12px; border-radius:8px; margin-bottom:30px; word-break:break-all;
     }
 
-    .confirm-btn {
-      background: #00c851; color: #fff; border: none;
-      padding: 15px 30px; font-size: 18px; border-radius: 10px;
-      cursor: pointer; width: 100%; margin-bottom: 15px; transition: background .3s; font-weight: 600;
+    .confirm-btn{
+      background:#00c851; color:#fff; border:none;
+      padding:15px 30px; font-size:18px; border-radius:10px;
+      cursor:pointer; width:100%; margin-bottom:15px; transition:background .3s; font-weight:600;
     }
-    .confirm-btn:hover { background: #00a844; }
-    .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .confirm-btn:hover{ background:#00a844; }
+    .confirm-btn:disabled{ background:#ccc; cursor:not-allowed; }
 
-    .cancel-btn {
-      background: #dc3545; color: #fff; border: none;
-      padding: 12px 25px; font-size: 16px; border-radius: 8px;
-      cursor: pointer; width: 100%; transition: background .3s; font-weight: 600;
+    .cancel-btn{
+      background:#dc3545; color:#fff; border:none;
+      padding:12px 25px; font-size:16px; border-radius:8px;
+      cursor:pointer; width:100%; transition:background .3s; font-weight:600;
     }
-    .cancel-btn:hover { background: #c82333; }
+    .cancel-btn:hover{ background:#c82333; }
 
-    .message { color: #666; font-size: 16px; line-height: 1.5; }
-    .error { color: #dc3545; font-weight: 700; }
-    .success { color: #00c851; font-weight: 700; }
-    .redirecting { color: #ff6b35; font-weight: 700; }
-    .countdown { font-size: 20px; color: #00c851; font-weight: 700; }
+    .message{ color:#666; font-size:16px; line-height:1.5; }
+    .error{ color:#dc3545; font-weight:700; }
+    .success{ color:#00c851; font-weight:700; }
+    .redirecting{ color:#ff6b35; font-weight:700; }
+    .countdown{ font-size:20px; color:#00c851; font-weight:700; }
 
-    .status-info {
-      background: #f8f9fa; border-radius: 8px; padding: 15px; margin: 20px 0;
-      font-size: 14px; text-align: center; color: #333; border-left: 4px solid #00c851; word-break: break-word;
+    .status-info{
+      background:#f8f9fa; border-radius:8px; padding:15px; margin:20px 0;
+      font-size:14px; text-align:center; color:#333; border-left:4px solid #00c851; word-break:break-word;
     }
-
-    .url-label { font-weight: 700; color: #00c851; margin-bottom: 8px; text-align: center; }
+    .url-label{ font-weight:700; color:#00c851; margin-bottom:8px; text-align:center; }
   </style>
 </head>
 <body>
@@ -123,38 +110,73 @@
     const GLIDE_URL = 'https://ezyrfq.glide.page';
     let userProfile = null;
 
-    const getQueryParam = (name) => new URLSearchParams(window.location.search).get(name) || '';
+    /* --- ดึง rowid จาก URL เสมอ (รองรับ rowid / rowId / RowID) --- */
+    function getRowIdFromUrlStrict(){
+      const search = new URLSearchParams(location.search);
+      const keys = ['rowid','rowId','RowID'];
+      for(const k of keys){
+        const v = (search.get(k) || '').trim();
+        if (v) return v;
+      }
+      // (ถ้าบางระบบส่งมาหลัง hash แบบ #...?rowid=xxx ให้ลองอ่านด้วย)
+      if (location.hash && location.hash.includes('?')){
+        const qs = location.hash.slice(location.hash.indexOf('?') + 1);
+        const h = new URLSearchParams(qs);
+        for(const k of keys){
+          const v = (h.get(k) || '').trim();
+          if (v) return v;
+        }
+      }
+      return '';
+    }
 
-    function showLoading(message) {
+    function requireRowId(){
+      const id = getRowIdFromUrlStrict();
+      if (!id){
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('userInfo').style.display = 'none';
+        document.getElementById('redirectInfo').style.display = 'none';
+        document.getElementById('loadingMessage').innerHTML =
+          '<span class="error">ไม่พบ rowid ใน URL</span><br><small>โปรดเปิดหน้านี้ด้วยลิงก์ที่ถูกต้อง เช่น<br>https://scghomesolution.github.io/rakmao_ezy/?rowid=YOUR_ROW_ID</small>';
+        const btn = document.getElementById('confirmBtn'); if (btn) btn.disabled = true;
+        throw new Error('Missing rowid');
+      }
+      return id;
+    }
+
+    function showLoading(message){
       document.getElementById('loadingMessage').textContent = message;
       document.getElementById('loading').style.display = 'block';
       document.getElementById('userInfo').style.display = 'none';
       document.getElementById('redirectInfo').style.display = 'none';
     }
 
-    function showUserInfo(profile) {
+    function showUserInfo(profile){
       userProfile = profile;
-      const rowId = getQueryParam('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
+      const rowId = requireRowId();
+
       document.getElementById('profileImage').src =
         profile.pictureUrl ||
         'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
+
       document.getElementById('userName').textContent = profile.displayName || 'ไม่ระบุชื่อ';
       document.getElementById('userId').innerHTML =
         `User ID: ${profile.userId}<br><small style="color:#999;font-size:12px;">Row ID: ${rowId}</small>`;
+
       document.getElementById('loading').style.display = 'none';
       document.getElementById('userInfo').style.display = 'block';
       document.getElementById('redirectInfo').style.display = 'none';
     }
 
-    function showRedirectInfo(message) {
+    function showRedirectInfo(message){
       document.getElementById('redirectUrl').textContent = message;
       document.getElementById('loading').style.display = 'none';
       document.getElementById('userInfo').style.display = 'none';
       document.getElementById('redirectInfo').style.display = 'block';
     }
 
-    function redirectToApp() {
-      if (!userProfile) {
+    function redirectToApp(){
+      if (!userProfile){
         document.getElementById('loadingMessage').innerHTML = '<span class="error">ไม่พบข้อมูลผู้ใช้</span>';
         return;
       }
@@ -162,19 +184,15 @@
       sendToGlideAPI();
     }
 
-    async function sendToGlideAPI() {
-      try {
+    async function sendToGlideAPI(){
+      try{
         document.getElementById('countdownMessage').innerHTML =
           '<span class="redirecting">กำลังส่งข้อมูลผู้ใช้...</span>';
 
         const userId = userProfile.userId || '';
         const userName = userProfile.displayName || '';
         const profileImg = userProfile.pictureUrl || '';
-        const rowId = getQueryParam('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
-
-        // ใช้โทเคนจาก URL แทนฮาร์ดโค้ด
-        const AUTH_TOKEN = getQueryParam('token');
-        if (!AUTH_TOKEN) console.warn('No AUTH token provided via ?token=...');
+        const rowId = requireRowId();
 
         const apiPayload = {
           appID: "wFtUtanipzHwHsjbHCij",
@@ -192,142 +210,122 @@
           ]
         };
 
+        /* หมายเหตุ: ไม่มี Authorization header ตามที่ร้องขอ
+           หากปลายทางต้องการโทเคน การเรียกนี้อาจถูกปฏิเสธ (401) */
         const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + AUTH_TOKEN
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(apiPayload)
         });
 
-        if (response.ok) {
+        if (response.ok){
           const result = await response.json();
           console.log('API Success:', result);
           document.getElementById('countdownMessage').innerHTML =
             '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
           setTimeout(() => { forceCloseWindow(); }, 500);
-        } else {
+        }else{
           throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
-      } catch (error) {
+      }catch(error){
         console.error('API Error:', error);
         document.getElementById('countdownMessage').innerHTML =
           `<span class="error">❌ เกิดข้อผิดพลาด: ${error.message}</span>`;
         setTimeout(() => {
           document.getElementById('countdownMessage').innerHTML =
-            '<button onclick="sendToGlideAPI()" style="background:#dc3545;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;">ลองใหม่อีกครั้ง</button>';
+            '<button onclick="sendToGlideAPI()" style="background:#dc3545;color:#fff;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;">ลองใหม่อีกครั้ง</button>';
         }, 3000);
       }
     }
 
-    function forceCloseWindow() {
-      // ซ่อนหน้าทันทีให้เหมือนปิดแล้ว
-      try {
-        document.body.style.display = 'none';
-        document.documentElement.style.display = 'none';
-      } catch(e){}
-
-      // ปิดด้วย LIFF ถ้าอยู่ใน LINE
-      try {
-        if (typeof liff !== 'undefined' && liff.isInClient()) liff.closeWindow();
-      } catch(e){}
-
-      // ย้อนกลับถ้ามี history
-      try { if (window.history.length > 1) window.history.back(); } catch(e){}
-
-      // พยายามปิดหน้าต่าง
-      setTimeout(() => { try { window.close(); } catch(e){} }, 50);
-      // เปลี่ยนเส้นทางไป about:blank
-      setTimeout(() => { try { window.location.replace('about:blank'); } catch(e){} }, 100);
-      // พยายามสั่ง close ซ้ำ
-      setTimeout(() => { try { window.location.href = 'javascript:window.close()'; } catch(e){} }, 150);
-      // ล้าง DOM ให้ขาวสนิท
-      setTimeout(() => { try {
-        document.body.innerHTML = '';
-        document.head.innerHTML = '<title>Closed</title>';
-        document.body.style.backgroundColor = '#ffffff';
-      } catch(e){} }, 200);
-      // ปิด parent ถ้าเป็น iframe
-      setTimeout(() => { try { if (window.parent && window.parent !== window) window.parent.close(); } catch(e){} }, 250);
-      // ยิงกลับเข้าแอป LINE (บางกรณีช่วยให้หน้าต่างถูก takeover)
-      setTimeout(() => { try { window.location.href = 'line://'; } catch(e){} }, 300);
-      // ปิดการโต้ตอบทั้งหมด
-      setTimeout(() => { try {
-        document.documentElement.style.opacity = '0';
-        document.documentElement.style.pointerEvents = 'none';
-        document.body.style.visibility = 'hidden';
-      } catch(e){} }, 350);
+    function forceCloseWindow(){
+      try{ document.body.style.display='none'; document.documentElement.style.display='none'; }catch(e){}
+      try{ if (typeof liff!=='undefined' && liff.isInClient()) liff.closeWindow(); }catch(e){}
+      try{ if (history.length>1) history.back(); }catch(e){}
+      setTimeout(() => { try{ window.close(); }catch(e){} }, 50);
+      setTimeout(() => { try{ location.replace('about:blank'); }catch(e){} }, 100);
+      setTimeout(() => { try{ location.href='javascript:window.close()'; }catch(e){} }, 150);
+      setTimeout(() => { try{
+        document.body.innerHTML=''; document.head.innerHTML='<title>Closed</title>'; document.body.style.backgroundColor='#fff';
+      }catch(e){} }, 200);
+      setTimeout(() => { try{ if (parent && parent!==window) parent.close(); }catch(e){} }, 250);
+      setTimeout(() => { try{ location.href='line://'; }catch(e){} }, 300);
+      setTimeout(() => { try{
+        document.documentElement.style.opacity='0';
+        document.documentElement.style.pointerEvents='none';
+        document.body.style.visibility='hidden';
+      }catch(e){} }, 350);
     }
 
-    function goBackToGlide() {
-      try {
-        if (window.history.length > 1) { window.history.back(); return; }
-        if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); return; }
+    function goBackToGlide(){
+      try{
+        if (history.length>1){ history.back(); return; }
+        if (typeof liff!=='undefined' && liff.isInClient()){ liff.closeWindow(); return; }
         const glideUrl = `${GLIDE_URL}/dl/818fd2`;
-        if (typeof liff !== 'undefined' && liff.isInClient()) {
-          liff.openWindow({ url: glideUrl, external: false });
-        } else {
-          window.location.href = glideUrl;
+        if (typeof liff!=='undefined' && liff.isInClient()){
+          liff.openWindow({ url: glideUrl, external:false });
+        }else{
+          location.href = glideUrl;
         }
         document.getElementById('countdownMessage').innerHTML =
           '<span class="success">กำลังเปิดแอป... หากไม่เปิดให้ปิดหน้าต่างนี้เอง</span>';
-      } catch (error) {
+      }catch(error){
         console.error('Error going back to Glide:', error);
         document.getElementById('countdownMessage').innerHTML =
-          '<span class="success">เชื่อมข้อมูลสำเร็จแล้ว</span><br><br><span style="color:#666;font-size:14px;">กรุณากดปุ่ม "&lt; กลับ" บนเบราว์เซอร์<br>หรือปิดหน้าต่างนี้</span>';
+          '<span class="success">เชื่อมข้อมูลสำเร็จแล้ว</span><br><br><span style="color:#666;font-size:14px;">กรุณากดปุ่ม "&lt; กลับ" บนเบราว์เซอร์ หรือปิดหน้าต่างนี้</span>';
       }
     }
 
-    function openGlideApp() {
-      try {
+    function openGlideApp(){
+      try{
         const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
-        if (typeof liff !== 'undefined' && liff.isInClient()) {
-          liff.openWindow({ url: glideAppUrl, external: false });
-        } else {
+        if (typeof liff!=='undefined' && liff.isInClient()){
+          liff.openWindow({ url: glideAppUrl, external:false });
+        }else{
           window.open(glideAppUrl, '_blank');
         }
         setTimeout(() => { closeLiff(); }, 1000);
-      } catch (error) {
+      }catch(error){
         console.error('Error opening Glide App:', error);
       }
     }
 
-    function closeLiff() {
-      // เก็บไว้เผื่อใช้ — แต่ตอนนี้ปุ่มยกเลิกเรียก forceCloseWindow() โดยตรง
-      try {
-        if (window.history.length > 1) { window.history.back(); return; }
-        if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); return; }
+    function closeLiff(){
+      try{
+        if (history.length>1){ history.back(); return; }
+        if (typeof liff!=='undefined' && liff.isInClient()){ liff.closeWindow(); return; }
         document.getElementById('countdownMessage').innerHTML =
           '<span class="success">กรุณากดปุ่ม "&lt; กลับ" บนเบราว์เซอร์</span>';
-      } catch (error) {
+      }catch(error){
         console.error('Error closing LIFF:', error);
         document.getElementById('countdownMessage').innerHTML =
           '<span class="success">กรุณากดปุ่ม "&lt; กลับ" บนเบราว์เซอร์</span>';
       }
     }
 
-    async function handleLoginState() {
-      try {
-        if (!liff.isLoggedIn()) {
-          showLoading('กำลังเข้าสู่ระบบ LINE...');
-          liff.login();
+    async function handleLoginState(){
+      try{
+        if (!liff.isLoggedIn()){
+          // กลับมาหน้าเดิมพร้อมพารามิเตอร์ (คง rowid ใน URL)
+          liff.login({ redirectUri: location.href });
           return false;
         }
         showLoading('กำลังดึงข้อมูลโปรไฟล์...');
         const profile = await liff.getProfile();
         showUserInfo(profile);
         return true;
-      } catch (error) { throw error; }
+      }catch(error){ throw error; }
     }
 
-    async function initializeLiff() {
-      try {
+    async function initializeLiff(){
+      try{
         showLoading('กำลังเริ่มต้น LIFF...');
-        if (typeof liff === 'undefined') throw new Error('LIFF SDK ไม่สามารถโหลดได้');
+        if (typeof liff==='undefined') throw new Error('LIFF SDK ไม่สามารถโหลดได้');
+        // ตรวจสอบว่ามี rowid ก่อนเริ่ม (ถ้าไม่มีจะ throw)
+        requireRowId();
         await liff.init({ liffId: LIFF_ID });
         await handleLoginState();
-      } catch (error) {
+      }catch(error){
         console.error('LIFF Error:', error);
         document.getElementById('loading').style.display = 'block';
         document.getElementById('userInfo').style.display = 'none';
@@ -337,38 +335,38 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      document.getElementById('confirmBtn').addEventListener('click', function () {
+    document.addEventListener('DOMContentLoaded', function(){
+      document.getElementById('confirmBtn').addEventListener('click', function(){
         this.disabled = true;
         redirectToApp();
       });
-      document.getElementById('cancelBtn').addEventListener('click', function () {
-        // 🔴 ปิดหน้าต่างทันทีแบบ aggressive
+      document.getElementById('cancelBtn').addEventListener('click', function(){
+        // ปิดหน้าต่างทันที
         forceCloseWindow();
       });
       initializeLiff();
     });
 
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden && typeof liff !== 'undefined') {
+    document.addEventListener('visibilitychange', function(){
+      if (!document.hidden && typeof liff!=='undefined'){
         setTimeout(() => { if (liff.isLoggedIn()) handleLoginState(); }, 1000);
       }
     });
 
-    window.addEventListener('focus', function () {
-      if (typeof liff !== 'undefined') {
+    window.addEventListener('focus', function(){
+      if (typeof liff!=='undefined'){
         setTimeout(() => { if (liff.isLoggedIn()) handleLoginState(); }, 1000);
       }
     });
 
-    // เผยให้เรียกจากภายนอกได้
+    // เผยให้เรียกจากภายนอก
     window.closeLiff = closeLiff;
     window.openGlideApp = openGlideApp;
     window.sendToGlideAPI = sendToGlideAPI;
     window.goBackToGlide = goBackToGlide;
     window.forceCloseWindow = forceCloseWindow;
 
-    window.addEventListener('error', function (e) {
+    window.addEventListener('error', function(e){
       console.error('Global Error:', e.error);
     });
   </script>
