@@ -276,21 +276,21 @@
                 console.log('Using Row ID:', rowId);
                 
                 // สร้าง API payload
-                const apiPayload = {
-                    "appID": "wFtUtanipzHwHsjbHCij",
-                    "mutations": [
-                        {
-                            "kind": "set-columns-in-row",
-                            "tableName": "native-table-IaIndnwMfS7KEFynqr7N",
-                            "columnValues": {
-                                "Bw85m": userId,        // line_id
-                                "jtoSZ": userName,      // line_name  
-                                "ivZXQ": profileImg     // line_img
-                            },
-                            "rowID": rowId // ใช้ rowID จาก URL parameter
-                        }
-                    ]
-                };
+               const apiPayload = {
+  appID: "wFtUtanipzHwHsjbHCij",
+  mutations: [
+    {
+      kind: "set-columns-in-row",
+      tableName: "native-table-Iaj8OYHgkSlTKB831ukh", // <-- เปลี่ยนตามสเปกใหม่
+      columnValues: {
+        hbHy1: userId,       // <-- line_id
+        "7TucJ": userName,   // <-- line_name (คีย์ขึ้นต้นด้วยเลข ต้องใส่เครื่องหมายคำพูด)
+        rzbcg: profileImg    // <-- line_img
+      },
+      rowID: rowId           // <-- ใช้ค่า rowid จาก URL (เหมือนเดิม)
+    }
+  ]
+};
                 
                 // ส่ง API request
                 const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
