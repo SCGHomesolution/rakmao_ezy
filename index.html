@@ -6,16 +6,11 @@
   <title>LINE LIFF Bridge</title>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    /* ① นำเข้า Prompt ด้วย @import ต้องอยู่บรรทัดแรกของบล็อก <style> */
+    /* ใช้ Prompt ด้วย @import — ต้องอยู่บรรทัดแรกใน <style> */
     @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ② ตั้งค่าให้ทั้งหน้าพิมพ์ด้วย Prompt (+ เผื่อ Noto Sans Thai เป็น fallback) */
     body {
       font-family: 'Prompt', 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
       background: linear-gradient(135deg, #00c851, #00ff41);
@@ -26,8 +21,13 @@
       padding: 20px;
     }
 
+    /* บังคับให้ปุ่มใช้ฟอนต์ Prompt แน่นอน */
+    button, .confirm-btn, .cancel-btn {
+      font-family: 'Prompt', 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji' !important;
+    }
+
     .container {
-      background: white;
+      background: #fff;
       border-radius: 20px;
       padding: 30px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.2);
@@ -49,63 +49,31 @@
       animation: spin 1s linear infinite;
       margin: 0 auto 20px;
     }
-
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     .profile-image {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin: 0 auto 20px;
-      border: 4px solid #00c851;
-      display: block;
+      width: 100px; height: 100px; border-radius: 50%;
+      object-fit: cover; margin: 0 auto 20px; border: 4px solid #00c851; display: block;
     }
 
-    .user-name {
-      font-size: 24px;
-      font-weight: 700;
-      color: #333;
-      margin-bottom: 10px;
-    }
-
+    .user-name { font-size: 24px; font-weight: 700; color: #333; margin-bottom: 10px; }
     .user-id {
-      font-size: 14px;
-      color: #666;
-      background: #f5f5f5;
-      padding: 8px 12px;
-      border-radius: 8px;
-      margin-bottom: 30px;
-      word-break: break-all;
+      font-size: 14px; color: #666; background: #f5f5f5;
+      padding: 8px 12px; border-radius: 8px; margin-bottom: 30px; word-break: break-all;
     }
 
     .confirm-btn {
-      background: #00c851;
-      color: white;
-      border: none;
-      padding: 15px 30px;
-      font-size: 18px;
-      border-radius: 10px;
-      cursor: pointer;
-      width: 100%;
-      margin-bottom: 15px;
-      transition: background 0.3s;
-      font-weight: 600;
+      background: #00c851; color: #fff; border: none;
+      padding: 15px 30px; font-size: 18px; border-radius: 10px;
+      cursor: pointer; width: 100%; margin-bottom: 15px; transition: background .3s; font-weight: 600;
     }
     .confirm-btn:hover { background: #00a844; }
     .confirm-btn:disabled { background: #ccc; cursor: not-allowed; }
 
     .cancel-btn {
-      background: #dc3545;
-      color: white;
-      border: none;
-      padding: 12px 25px;
-      font-size: 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      width: 100%;
-      transition: background 0.3s;
-      font-weight: 600;
+      background: #dc3545; color: #fff; border: none;
+      padding: 12px 25px; font-size: 16px; border-radius: 8px;
+      cursor: pointer; width: 100%; transition: background .3s; font-weight: 600;
     }
     .cancel-btn:hover { background: #c82333; }
 
@@ -116,23 +84,11 @@
     .countdown { font-size: 20px; color: #00c851; font-weight: 700; }
 
     .status-info {
-      background: #f8f9fa;
-      border-radius: 8px;
-      padding: 15px;
-      margin: 20px 0;
-      font-size: 14px;
-      text-align: center;
-      color: #333;
-      border-left: 4px solid #00c851;
-      word-break: break-word;
+      background: #f8f9fa; border-radius: 8px; padding: 15px; margin: 20px 0;
+      font-size: 14px; text-align: center; color: #333; border-left: 4px solid #00c851; word-break: break-word;
     }
 
-    .url-label {
-      font-weight: 700;
-      color: #00c851;
-      margin-bottom: 8px;
-      text-align: center;
-    }
+    .url-label { font-weight: 700; color: #00c851; margin-bottom: 8px; text-align: center; }
   </style>
 </head>
 <body>
@@ -148,7 +104,6 @@
       <img id="profileImage" class="profile-image" src="" alt="Profile Picture" />
       <div id="userName" class="user-name"></div>
       <div id="userId" class="user-id"></div>
-
       <button id="confirmBtn" class="confirm-btn">ยืนยันการเชื่อมข้อมูล</button>
       <button id="cancelBtn" class="cancel-btn">ยกเลิก</button>
     </div>
@@ -157,10 +112,8 @@
     <div id="redirectInfo" class="redirect-info">
       <div class="spinner"></div>
       <div id="redirectMessage" class="message redirecting">กำลังเตรียมเชื่อมข้อมูล...</div>
-
       <div class="url-label">สถานะ:</div>
       <div id="redirectUrl" class="status-info"></div>
-
       <div id="countdownMessage" class="message"></div>
     </div>
   </div>
@@ -168,12 +121,9 @@
   <script>
     const LIFF_ID = '2008146540-vb4OMaMV';
     const GLIDE_URL = 'https://ezyrfq.glide.page';
-
     let userProfile = null;
 
-    function getQueryParam(name) {
-      return new URLSearchParams(window.location.search).get(name) || '';
-    }
+    const getQueryParam = (name) => new URLSearchParams(window.location.search).get(name) || '';
 
     function showLoading(message) {
       document.getElementById('loadingMessage').textContent = message;
@@ -184,18 +134,13 @@
 
     function showUserInfo(profile) {
       userProfile = profile;
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const rowId = urlParams.get('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
-
+      const rowId = getQueryParam('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
       document.getElementById('profileImage').src =
         profile.pictureUrl ||
         'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
-
       document.getElementById('userName').textContent = profile.displayName || 'ไม่ระบุชื่อ';
       document.getElementById('userId').innerHTML =
         `User ID: ${profile.userId}<br><small style="color:#999;font-size:12px;">Row ID: ${rowId}</small>`;
-
       document.getElementById('loading').style.display = 'none';
       document.getElementById('userInfo').style.display = 'block';
       document.getElementById('redirectInfo').style.display = 'none';
@@ -225,14 +170,11 @@
         const userId = userProfile.userId || '';
         const userName = userProfile.displayName || '';
         const profileImg = userProfile.pictureUrl || '';
-
         const rowId = getQueryParam('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
 
-        // **** ไม่มีโทเคนฮาร์ดโค้ด อ่านจาก query param: ?token=xxxxx ****
+        // ใช้โทเคนจาก URL แทนฮาร์ดโค้ด
         const AUTH_TOKEN = getQueryParam('token');
-        if (!AUTH_TOKEN) {
-          console.warn('No AUTH token provided via ?token=...');
-        }
+        if (!AUTH_TOKEN) console.warn('No AUTH token provided via ?token=...');
 
         const apiPayload = {
           appID: "wFtUtanipzHwHsjbHCij",
@@ -254,7 +196,6 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // ใช้โทเคนจาก URL แทนการฮาร์ดโค้ด
             'Authorization': 'Bearer ' + AUTH_TOKEN
           },
           body: JSON.stringify(apiPayload)
@@ -265,7 +206,7 @@
           console.log('API Success:', result);
           document.getElementById('countdownMessage').innerHTML =
             '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
-          setTimeout(() => { forceCloseWindow(); }, 1000);
+          setTimeout(() => { forceCloseWindow(); }, 500);
         } else {
           throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
@@ -281,26 +222,42 @@
     }
 
     function forceCloseWindow() {
-      console.log('Force closing window in all scenarios...');
-      document.body.style.display = 'none';
-      document.documentElement.style.display = 'none';
-      try { if (typeof liff !== 'undefined' && liff.isInClient()) liff.closeWindow(); } catch(e){}
+      // ซ่อนหน้าทันทีให้เหมือนปิดแล้ว
+      try {
+        document.body.style.display = 'none';
+        document.documentElement.style.display = 'none';
+      } catch(e){}
+
+      // ปิดด้วย LIFF ถ้าอยู่ใน LINE
+      try {
+        if (typeof liff !== 'undefined' && liff.isInClient()) liff.closeWindow();
+      } catch(e){}
+
+      // ย้อนกลับถ้ามี history
       try { if (window.history.length > 1) window.history.back(); } catch(e){}
-      setTimeout(() => { try { window.close(); } catch(e){} }, 100);
-      setTimeout(() => { try { window.location.replace('about:blank'); } catch(e){} }, 200);
-      setTimeout(() => { try { window.location.href = 'javascript:window.close()'; } catch(e){} }, 300);
+
+      // พยายามปิดหน้าต่าง
+      setTimeout(() => { try { window.close(); } catch(e){} }, 50);
+      // เปลี่ยนเส้นทางไป about:blank
+      setTimeout(() => { try { window.location.replace('about:blank'); } catch(e){} }, 100);
+      // พยายามสั่ง close ซ้ำ
+      setTimeout(() => { try { window.location.href = 'javascript:window.close()'; } catch(e){} }, 150);
+      // ล้าง DOM ให้ขาวสนิท
       setTimeout(() => { try {
         document.body.innerHTML = '';
         document.head.innerHTML = '<title>Closed</title>';
         document.body.style.backgroundColor = '#ffffff';
-      } catch(e){} }, 400);
-      setTimeout(() => { try { if (window.parent && window.parent !== window) window.parent.close(); } catch(e){} }, 500);
-      setTimeout(() => { try { window.location.href = 'line://'; } catch(e){} }, 600);
+      } catch(e){} }, 200);
+      // ปิด parent ถ้าเป็น iframe
+      setTimeout(() => { try { if (window.parent && window.parent !== window) window.parent.close(); } catch(e){} }, 250);
+      // ยิงกลับเข้าแอป LINE (บางกรณีช่วยให้หน้าต่างถูก takeover)
+      setTimeout(() => { try { window.location.href = 'line://'; } catch(e){} }, 300);
+      // ปิดการโต้ตอบทั้งหมด
       setTimeout(() => { try {
         document.documentElement.style.opacity = '0';
         document.documentElement.style.pointerEvents = 'none';
         document.body.style.visibility = 'hidden';
-      } catch(e){} }, 700);
+      } catch(e){} }, 350);
     }
 
     function goBackToGlide() {
@@ -337,6 +294,7 @@
     }
 
     function closeLiff() {
+      // เก็บไว้เผื่อใช้ — แต่ตอนนี้ปุ่มยกเลิกเรียก forceCloseWindow() โดยตรง
       try {
         if (window.history.length > 1) { window.history.back(); return; }
         if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); return; }
@@ -385,7 +343,8 @@
         redirectToApp();
       });
       document.getElementById('cancelBtn').addEventListener('click', function () {
-        closeLiff();
+        // 🔴 ปิดหน้าต่างทันทีแบบ aggressive
+        forceCloseWindow();
       });
       initializeLiff();
     });
@@ -402,6 +361,7 @@
       }
     });
 
+    // เผยให้เรียกจากภายนอกได้
     window.closeLiff = closeLiff;
     window.openGlideApp = openGlideApp;
     window.sendToGlideAPI = sendToGlideAPI;
