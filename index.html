@@ -346,34 +346,78 @@ button, input, select, textarea{
         }
         
         async function forceCloseWindow() {
-  console.log('forceCloseWindow: try to close without opening anything');
+            console.log('🔴 forceCloseWindow: Starting close sequence...');
+            
+            // 1) ปิดใน LINE app โดยตรง (วิธีที่ดีที่สุดสำหรับ LIFF)
+            try {
+                if (typeof liff !== 'undefined') {
+                    console.log('✅ LIFF is available');
+                    
+                    // ถ้า LIFF ยังไม่ได้ init ให้ init ก่อน
+                    if (!liff._initialized) {
+                        console.log('⚠️ LIFF not initialized, initializing...');
+                        await liff.init({ liffId: LIFF_ID });
+                    }
+                    
+                    // ตรวจสอบว่าอยู่ใน LINE app หรือไม่
+                    if (liff.isInClient()) {
+                        console.log('✅ In LINE app, using liff.closeWindow()');
+                        liff.closeWindow();
+                        
+                        // แสดงข้อความสำรองกรณีที่ยังไม่ปิด
+                        setTimeout(() => {
+                            console.log('⚠️ Window still open after 2 seconds');
+                            showClosingMessage();
+                        }, 2000);
+                        return;
+                    } else {
+                        console.log('⚠️ Not in LINE app, trying external browser methods');
+                    }
+                }
+            } catch (e) {
+                console.error('❌ LIFF close failed:', e);
+            }
 
-  // 1) ปิดใน LINE app โดยตรง (กันกรณี init ยังไม่เสร็จ)
-  try {
-    if (typeof liff !== 'undefined') {
-      if (!liff._initialized) {
-        try { await liff.init({ liffId: LIFF_ID }); } catch (_) {}
-      }
-      if (typeof liff.isInClient === 'function' && liff.isInClient()) {
-        liff.closeWindow();
-        return;
-      }
-    }
-  } catch (e) { console.log('liff close failed:', e); }
+            // 2) สำหรับ External Browser - ลองปิดด้วยวิธีต่างๆ
+            try {
+                console.log('🔹 Attempting window.close()');
+                window.close();
+                
+                // ถ้าปิดไม่ได้ หลัง 1 วินาที ให้แสดงข้อความ
+                setTimeout(() => {
+                    if (!document.hidden) {
+                        console.log('⚠️ Cannot close window automatically');
+                        showClosingMessage();
+                    }
+                }, 1000);
+                return;
+            } catch (e) {
+                console.error('❌ window.close() failed:', e);
+            }
 
-  // 2) ปิดได้ถ้าเป็นหน้าต่างที่เปิดด้วยสคริปต์
-  try { window.open('', '_self'); window.close(); return; } catch (e) {}
-
-  // 3) ถ้าอยู่ใน iframe / มี opener / มี top ให้ลองปิด
-  try { if (window.opener && !window.opener.closed) { window.close(); return; } } catch (e) {}
-  try { if (window.top && window.top !== window) { window.top.close(); return; } } catch (e) {}
-
-  // 4) ถ้ามี history ให้ย้อนกลับ (จะ “ออก” แทนการเปิดหน้าใหม่)
-  try { if (window.history.length > 1) { window.history.go(-1); return; } } catch (e) {}
-
-  // 5) สุดท้ายจริง ๆ: ไปหน้าเปล่า (จะไม่เปิดเว็บอื่น/แอปอื่น)
-  try { window.location.replace('about:blank'); } catch (e) {}
-}
+            // 3) ถ้าปิดไม่ได้ทุกวิธี แสดงข้อความให้ผู้ใช้ปิดเอง
+            showClosingMessage();
+        }
+        
+        function showClosingMessage() {
+            console.log('📌 Showing manual close message');
+            
+            // ถ้าอยู่ในหน้า redirect info
+            const redirectInfo = document.getElementById('redirectInfo');
+            if (redirectInfo && redirectInfo.style.display !== 'none') {
+                document.getElementById('countdownMessage').innerHTML = 
+                    '<span class="success">✅ เสร็จสิ้น!</span><br><br>' +
+                    '<span style="color: #666; font-size: 14px;">กรุณาปิดหน้าต่างนี้</span>';
+            } else {
+                // ถ้าอยู่หน้าอื่น แสดงข้อความในหน้า loading
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('redirectInfo').style.display = 'none';
+                document.getElementById('loadingMessage').innerHTML = 
+                    '<span class="success">✅ เสร็จสิ้น!</span><br><br>' +
+                    '<span style="color: #666;">กรุณาปิดหน้าต่างนี้</span>';
+            }
+        }
 
         
         function goBackToGlide() {
