@@ -345,39 +345,34 @@ button, input, select, textarea{
             }
         }
         
-        function forceCloseWindow() {
-  console.log('Force closing window (no new tabs, no redirects)...');
+        async function forceCloseWindow() {
+  console.log('forceCloseWindow: try to close without opening anything');
 
-  // 1) ปิดใน LINE app โดยตรง
+  // 1) ปิดใน LINE app โดยตรง (กันกรณี init ยังไม่เสร็จ)
   try {
-    if (typeof liff !== 'undefined' && liff.isInClient()) {
-      liff.closeWindow();
-      return;
+    if (typeof liff !== 'undefined') {
+      if (!liff._initialized) {
+        try { await liff.init({ liffId: LIFF_ID }); } catch (_) {}
+      }
+      if (typeof liff.isInClient === 'function' && liff.isInClient()) {
+        liff.closeWindow();
+        return;
+      }
     }
-  } catch (e) { console.log('liff.closeWindow failed:', e); }
+  } catch (e) { console.log('liff close failed:', e); }
 
-  // 2) ถ้าเป็นหน้าต่างลูก (เปิดด้วย window.open) ให้ปิดได้
-  if (window.opener && !window.opener.closed) {
-    try { window.close(); return; } catch (e) { console.log('window.close failed:', e); }
-  }
+  // 2) ปิดได้ถ้าเป็นหน้าต่างที่เปิดด้วยสคริปต์
+  try { window.open('', '_self'); window.close(); return; } catch (e) {}
 
-  // 3) ถ้าอยู่ใน iframe ลองแจ้ง parent และ/หรือถอยหน้า
-  if (window.parent && window.parent !== window) {
-    try { window.parent.postMessage({ type: 'LIFF_CLOSE_REQUEST' }, '*'); } catch(e){}
-    try { window.top.history.back(); return; } catch(e){}
-  }
+  // 3) ถ้าอยู่ใน iframe / มี opener / มี top ให้ลองปิด
+  try { if (window.opener && !window.opener.closed) { window.close(); return; } } catch (e) {}
+  try { if (window.top && window.top !== window) { window.top.close(); return; } } catch (e) {}
 
-  // 4) ถ้ามี History ให้ย้อนกลับ (จะไม่เปิดหน้าใหม่)
-  if (window.history.length > 1) {
-    try { window.history.back(); return; } catch (e) { console.log('history.back failed:', e); }
-  }
+  // 4) ถ้ามี history ให้ย้อนกลับ (จะ “ออก” แทนการเปิดหน้าใหม่)
+  try { if (window.history.length > 1) { window.history.go(-1); return; } } catch (e) {}
 
-  // 5) ทางเลือกสุดท้าย: ซ่อน/หยุดหน้า โดยไม่ redirect ไปที่ไหนเลย
-  try {
-    document.documentElement.style.display = 'none';
-    document.body.innerHTML = '';
-    window.stop?.(); // หยุดโหลด/รันเพิ่มเติม (บางเบราว์เซอร์)
-  } catch (e) { console.log('final hide/stop failed:', e); }
+  // 5) สุดท้ายจริง ๆ: ไปหน้าเปล่า (จะไม่เปิดเว็บอื่น/แอปอื่น)
+  try { window.location.replace('about:blank'); } catch (e) {}
 }
 
         
