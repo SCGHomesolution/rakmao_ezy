@@ -595,14 +595,10 @@ button, input, select, textarea{
                 redirectToApp();
             });
             
-           // ปุ่มยกเลิก (แก้จากเดิม)
+           // ปุ่มยกเลิก (ปิดหน้าต่างทันที)
 document.getElementById('cancelBtn').addEventListener('click', function () {
-  // เปิดหน้าต่าง (Glide) ทันทีจาก user gesture เพื่อไม่โดนบล็อค popup
-  openGlideApp();
-  // แล้วค่อยปิด/ย้อนหน้าปัจจุบันตามหลัง (รองรับทั้งใน/นอก LIFF)
-  setTimeout(() => { closeLiff(); }, 300);
+  forceCloseWindow();
 });
-
             
             // เริ่มต้น LIFF
             initializeLiff();
