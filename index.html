@@ -346,107 +346,40 @@ button, input, select, textarea{
         }
         
         function forceCloseWindow() {
-            console.log('Force closing window in all scenarios...');
-            
-            // Method 1: ซ่อนหน้าทันที
-            document.body.style.display = 'none';
-            document.documentElement.style.display = 'none';
-            
-            // Method 2: LIFF closeWindow (ทำงานใน LINE app)
-            try {
-                if (typeof liff !== 'undefined' && liff.isInClient()) {
-                    console.log('Trying liff.closeWindow()');
-                    liff.closeWindow();
-                }
-            } catch (e) {
-                console.log('liff.closeWindow() failed:', e);
-            }
-            
-            // Method 3: History back (สำหรับ nested windows)
-            try {
-                if (window.history.length > 1) {
-                    console.log('Trying history.back()');
-                    window.history.back();
-                }
-            } catch (e) {
-                console.log('history.back() failed:', e);
-            }
-            
-            // Method 4: Window close (สำหรับ popup windows)
-            setTimeout(() => {
-                try {
-                    console.log('Trying window.close()');
-                    window.close();
-                } catch (e) {
-                    console.log('window.close() failed:', e);
-                }
-            }, 100);
-            
-            // Method 5: Location replace to blank
-            setTimeout(() => {
-                try {
-                    console.log('Trying location replace to blank');
-                    window.location.replace('about:blank');
-                } catch (e) {
-                    console.log('location.replace() failed:', e);
-                }
-            }, 200);
-            
-            // Method 6: Location href to close protocol
-            setTimeout(() => {
-                try {
-                    console.log('Trying close protocol');
-                    window.location.href = 'javascript:window.close()';
-                } catch (e) {
-                    console.log('close protocol failed:', e);
-                }
-            }, 300);
-            
-            // Method 7: Remove all content and show blank page
-            setTimeout(() => {
-                try {
-                    document.body.innerHTML = '';
-                    document.head.innerHTML = '<title>Closed</title>';
-                    document.body.style.backgroundColor = '#ffffff';
-                } catch (e) {
-                    console.log('blank page failed:', e);
-                }
-            }, 400);
-            
-            // Method 8: Try parent window close (สำหรับ iframe/nested)
-            setTimeout(() => {
-                try {
-                    if (window.parent && window.parent !== window) {
-                        console.log('Trying parent.close()');
-                        window.parent.close();
-                    }
-                } catch (e) {
-                    console.log('parent.close() failed:', e);
-                }
-            }, 500);
-            
-            // Method 9: Force redirect to LINE
-            setTimeout(() => {
-                try {
-                    console.log('Trying redirect to LINE');
-                    window.location.href = 'line://';
-                } catch (e) {
-                    console.log('LINE redirect failed:', e);
-                }
-            }, 600);
-            
-            // Method 10: Ultimate fallback - hide everything
-            setTimeout(() => {
-                try {
-                    document.documentElement.style.opacity = '0';
-                    document.documentElement.style.pointerEvents = 'none';
-                    document.body.style.visibility = 'hidden';
-                    console.log('Page hidden completely');
-                } catch (e) {
-                    console.log('hide page failed:', e);
-                }
-            }, 700);
-        }
+  console.log('Force closing window (no new tabs, no redirects)...');
+
+  // 1) ปิดใน LINE app โดยตรง
+  try {
+    if (typeof liff !== 'undefined' && liff.isInClient()) {
+      liff.closeWindow();
+      return;
+    }
+  } catch (e) { console.log('liff.closeWindow failed:', e); }
+
+  // 2) ถ้าเป็นหน้าต่างลูก (เปิดด้วย window.open) ให้ปิดได้
+  if (window.opener && !window.opener.closed) {
+    try { window.close(); return; } catch (e) { console.log('window.close failed:', e); }
+  }
+
+  // 3) ถ้าอยู่ใน iframe ลองแจ้ง parent และ/หรือถอยหน้า
+  if (window.parent && window.parent !== window) {
+    try { window.parent.postMessage({ type: 'LIFF_CLOSE_REQUEST' }, '*'); } catch(e){}
+    try { window.top.history.back(); return; } catch(e){}
+  }
+
+  // 4) ถ้ามี History ให้ย้อนกลับ (จะไม่เปิดหน้าใหม่)
+  if (window.history.length > 1) {
+    try { window.history.back(); return; } catch (e) { console.log('history.back failed:', e); }
+  }
+
+  // 5) ทางเลือกสุดท้าย: ซ่อน/หยุดหน้า โดยไม่ redirect ไปที่ไหนเลย
+  try {
+    document.documentElement.style.display = 'none';
+    document.body.innerHTML = '';
+    window.stop?.(); // หยุดโหลด/รันเพิ่มเติม (บางเบราว์เซอร์)
+  } catch (e) { console.log('final hide/stop failed:', e); }
+}
+
         
         function goBackToGlide() {
             try {
