@@ -523,7 +523,8 @@ button, input, select, textarea{
             try {
                 if (!liff.isLoggedIn()) {
                     showLoading('กำลังเข้าสู่ระบบ LINE...');
-                    liff.login();
+                    // ส่ง URL เต็มพร้อม parameters เพื่อให้ redirect กลับมาที่เดิม
+                    liff.login({ redirectUri: window.location.href });
                     return false;
                 }
                 
