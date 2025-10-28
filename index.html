@@ -524,62 +524,126 @@ button, input, select, textarea{
                 if (!liff.isLoggedIn()) {
                     showLoading('กำลังเข้าสู่ระบบ LINE...');
                     
-                    // 🔥 เก็บ URL parameters (รวม rowid) ก่อน login
+                    // 🔥 วิธีที่ 1: เก็บ rowid ใน localStorage และ sessionStorage
                     const urlParams = new URLSearchParams(window.location.search);
-                    const params = {};
+                    const rowid = urlParams.get('rowid');
                     
+                    console.log('📍 Current URL:', window.location.href);
+                    console.log('📍 Extracted rowid:', rowid);
+                    
+                    if (rowid) {
+                        // เก็บทั้ง localStorage และ sessionStorage
+                        localStorage.setItem('saved_rowid', rowid);
+                        sessionStorage.setItem('saved_rowid', rowid);
+                        console.log('💾 Saved rowid to storage:', rowid);
+                    }
+                    
+                    // เก็บ parameters อื่นๆ ด้วย
+                    const allParams = {};
                     for (const [key, value] of urlParams.entries()) {
-                        // เก็บทุก parameter ยกเว้น liff parameters
                         if (!key.startsWith('liff.')) {
-                            params[key] = value;
-                            console.log(`💾 Saving parameter before login: ${key} = ${value}`);
+                            allParams[key] = value;
                         }
                     }
                     
-                    // เก็บไว้ใน sessionStorage
-                    if (Object.keys(params).length > 0) {
-                        sessionStorage.setItem('savedUrlParams', JSON.stringify(params));
-                        console.log('✅ Parameters saved to sessionStorage');
+                    if (Object.keys(allParams).length > 0) {
+                        localStorage.setItem('saved_params', JSON.stringify(allParams));
+                        sessionStorage.setItem('saved_params', JSON.stringify(allParams));
+                        console.log('💾 Saved all params:', allParams);
                     }
                     
-                    // 🔥 สร้าง redirect URI พร้อม parameters
+                    // 🔥 วิธีที่ 2: ใช้ liff.state เพื่อเก็บ rowid
+                    const stateData = rowid ? JSON.stringify({ rowid: rowid }) : null;
+                    
+                    // 🔥 วิธีที่ 3: สร้าง redirect URI แบบ hash (#) แทน query (?)
                     const baseUrl = window.location.origin + window.location.pathname;
-                    const redirectUrl = new URL(baseUrl);
+                    const redirectUrl = rowid 
+                        ? `${baseUrl}#rowid=${rowid}` 
+                        : baseUrl;
                     
-                    // เพิ่ม parameters กลับไปใน redirect URI
-                    for (const [key, value] of Object.entries(params)) {
-                        redirectUrl.searchParams.set(key, value);
-                    }
+                    console.log('🔗 Redirect URL:', redirectUrl);
+                    console.log('🔗 State data:', stateData);
                     
-                    console.log('🔗 Redirect URI with params:', redirectUrl.toString());
-                    
-                    liff.login({ redirectUri: redirectUrl.toString() });
+                    // Login พร้อม state
+                    liff.login({ 
+                        redirectUri: redirectUrl
+                    });
                     return false;
                 }
                 
-                // 🔥 หลัง login กลับมา - ดึง parameters ที่เก็บไว้
-                const savedParams = sessionStorage.getItem('savedUrlParams');
-                if (savedParams) {
-                    const params = JSON.parse(savedParams);
-                    console.log('📦 Retrieved saved parameters after login:', params);
-                    
-                    // ตรวจสอบว่า URL ปัจจุบันมี parameters ครบหรือไม่
-                    const currentUrl = new URL(window.location.href);
-                    let needUpdate = false;
-                    
-                    for (const [key, value] of Object.entries(params)) {
-                        if (!currentUrl.searchParams.has(key)) {
-                            currentUrl.searchParams.set(key, value);
-                            needUpdate = true;
-                            console.log(`✅ Restoring parameter: ${key} = ${value}`);
+                // 🔥 หลัง login กลับมา - ดึง rowid จากทุกที่ที่เก็บไว้
+                console.log('✅ Logged in, retrieving rowid...');
+                
+                let rowid = null;
+                
+                // วิธีที่ 1: ลองดึงจาก URL hash (#rowid=xxx)
+                if (window.location.hash) {
+                    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                    rowid = hashParams.get('rowid');
+                    if (rowid) {
+                        console.log('📦 Found rowid in hash:', rowid);
+                    }
+                }
+                
+                // วิธีที่ 2: ลองดึงจาก URL query (?rowid=xxx)
+                if (!rowid) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    rowid = urlParams.get('rowid');
+                    if (rowid) {
+                        console.log('📦 Found rowid in query:', rowid);
+                    }
+                }
+                
+                // วิธีที่ 3: ลองดึงจาก localStorage
+                if (!rowid) {
+                    rowid = localStorage.getItem('saved_rowid');
+                    if (rowid) {
+                        console.log('📦 Found rowid in localStorage:', rowid);
+                    }
+                }
+                
+                // วิธีที่ 4: ลองดึงจาก sessionStorage
+                if (!rowid) {
+                    rowid = sessionStorage.getItem('saved_rowid');
+                    if (rowid) {
+                        console.log('📦 Found rowid in sessionStorage:', rowid);
+                    }
+                }
+                
+                // วิธีที่ 5: ลองดึงจาก liff.state
+                if (!rowid) {
+                    try {
+                        const context = liff.getContext();
+                        if (context && context.liffState) {
+                            const stateData = JSON.parse(decodeURIComponent(context.liffState));
+                            rowid = stateData.rowid;
+                            if (rowid) {
+                                console.log('📦 Found rowid in liff.state:', rowid);
+                            }
                         }
+                    } catch (e) {
+                        console.log('⚠️ Could not parse liff.state');
                     }
+                }
+                
+                // 🔥 ถ้าเจอ rowid ให้อัพเดท URL
+                if (rowid) {
+                    const currentUrl = new URL(window.location.href);
                     
-                    // Update URL ถ้ามี parameters ที่หาย
-                    if (needUpdate) {
-                        console.log('🔄 Updating URL with restored parameters');
-                        window.history.replaceState({}, '', currentUrl.toString());
-                    }
+                    // ลบ hash ถ้ามี
+                    currentUrl.hash = '';
+                    
+                    // เพิ่ม rowid เข้า query parameter
+                    currentUrl.searchParams.set('rowid', rowid);
+                    
+                    // ลบ liff parameters ที่ไม่จำเป็น
+                    currentUrl.searchParams.delete('liff.state');
+                    currentUrl.searchParams.delete('liff.referrer');
+                    
+                    console.log('🔄 Updating URL to:', currentUrl.toString());
+                    window.history.replaceState({}, '', currentUrl.toString());
+                } else {
+                    console.warn('⚠️ rowid not found in any storage!');
                 }
                 
                 showLoading('กำลังดึงข้อมูลโปรไฟล์...');
