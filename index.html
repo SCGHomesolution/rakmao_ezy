@@ -350,6 +350,95 @@ button, input, select, textarea{
             closeInAppBrowser();
         }
         
+        // 🔥 ฟังก์ชันสำหรับตั้ง listener ปิดหน้า PWA browser เมื่อเด้งไป Safari
+        function setupPWACloseListener() {
+            console.log('🎯 Setting up PWA close listener...');
+            
+            // Method 1: ใช้ visibilitychange - เมื่อหน้าไม่ active (เด้งไป Safari)
+            const visibilityHandler = function() {
+                const isPWALogin = sessionStorage.getItem('pwa_login_redirect');
+                
+                if (document.hidden && isPWALogin === 'true') {
+                    console.log('👁️ Page hidden - redirecting to Safari');
+                    console.log('🚪 Closing PWA in-app browser...');
+                    
+                    // ปิดหน้านี้ทันที
+                    setTimeout(() => {
+                        closePWABrowser();
+                    }, 300);
+                }
+            };
+            
+            // Method 2: ใช้ blur event - เมื่อ window สูญเสีย focus
+            const blurHandler = function() {
+                const isPWALogin = sessionStorage.getItem('pwa_login_redirect');
+                
+                if (isPWALogin === 'true') {
+                    console.log('😶‍🌫️ Window blurred - likely redirecting to Safari');
+                    
+                    setTimeout(() => {
+                        closePWABrowser();
+                    }, 500);
+                }
+            };
+            
+            // Method 3: ใช้ pagehide event - เมื่อกำลังจะออกจากหน้า
+            const pagehideHandler = function() {
+                const isPWALogin = sessionStorage.getItem('pwa_login_redirect');
+                
+                if (isPWALogin === 'true') {
+                    console.log('👋 Page hiding - closing PWA browser');
+                    closePWABrowser();
+                }
+            };
+            
+            // ติดตั้ง listeners
+            document.addEventListener('visibilitychange', visibilityHandler, { once: true });
+            window.addEventListener('blur', blurHandler, { once: true });
+            window.addEventListener('pagehide', pagehideHandler, { once: true });
+            
+            // เก็บ reference เพื่อลบ listeners ภายหลัง
+            window._pwaCloseListeners = {
+                visibility: visibilityHandler,
+                blur: blurHandler,
+                pagehide: pagehideHandler
+            };
+        }
+        
+        // 🔥 ฟังก์ชันปิด PWA browser
+        function closePWABrowser() {
+            console.log('🚪 closePWABrowser: Attempting to close...');
+            
+            // ลบ flag
+            sessionStorage.removeItem('pwa_login_redirect');
+            
+            // วิธีที่ 1: ลอง window.close() (ได้ผลบาง browser)
+            try {
+                window.close();
+                console.log('✅ window.close() called');
+            } catch (e) {
+                console.log('⚠️ window.close() failed:', e);
+            }
+            
+            // วิธีที่ 2: ลอง history.back()
+            setTimeout(() => {
+                try {
+                    if (window.history.length > 1) {
+                        window.history.back();
+                        console.log('✅ history.back() called');
+                    }
+                } catch (e) {
+                    console.log('⚠️ history.back() failed:', e);
+                }
+            }, 100);
+            
+            // วิธีที่ 3: ซ่อนหน้า (เผื่อปิดไม่ได้)
+            setTimeout(() => {
+                document.body.style.display = 'none';
+                console.log('✅ Body hidden as fallback');
+            }, 200);
+        }
+        
         function closeInAppBrowser() {
             console.log('🚪 Attempting to close in-app browser...');
             
@@ -473,6 +562,27 @@ button, input, select, textarea{
                     
                     console.log('🔗 Redirect URL:', redirectUrl);
                     console.log('🔗 State data:', stateData);
+                    
+                    // 🔥 ตรวจสอบว่าเป็น PWA in-app browser หรือไม่
+                    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+                    const isIOSStandalone = window.navigator.standalone === true;
+                    const isInAppBrowser = isPWA || isIOSStandalone;
+                    
+                    console.log('🔍 Browser detection:', {
+                        isPWA,
+                        isIOSStandalone,
+                        isInAppBrowser
+                    });
+                    
+                    // 🔥 ถ้าเป็น PWA in-app browser
+                    // ตั้ง flag ว่ากำลัง login เพื่อปิดหน้าเมื่อ visibility change
+                    if (isInAppBrowser) {
+                        console.log('📱 Detected PWA in-app browser');
+                        sessionStorage.setItem('pwa_login_redirect', 'true');
+                        
+                        // ตั้ง listener เพื่อปิดหน้าเมื่อเด้งไป Safari
+                        setupPWACloseListener();
+                    }
                     
                     // Login พร้อม state
                     liff.login({ 
@@ -607,6 +717,11 @@ document.getElementById('cancelBtn').addEventListener('click', function () {
         
         // Handle page visibility change (สำหรับกรณีที่กลับมาจาก login)
         document.addEventListener('visibilitychange', function() {
+            // ถ้ากำลังปิด PWA browser อยู่ ไม่ต้องทำอะไร
+            if (sessionStorage.getItem('pwa_login_redirect') === 'true') {
+                return;
+            }
+            
             if (!document.hidden && typeof liff !== 'undefined') {
                 setTimeout(() => {
                     if (liff.isLoggedIn()) {
@@ -616,16 +731,6 @@ document.getElementById('cancelBtn').addEventListener('click', function () {
             }
         });
         
-        // Handle window focus (backup สำหรับกรณีที่กลับมาจาก login)
-        window.addEventListener('focus', function() {
-            if (typeof liff !== 'undefined') {
-                setTimeout(() => {
-                    if (liff.isLoggedIn()) {
-                        handleLoginState();
-                    }
-                }, 1000);
-            }
-        });
         
         // ทำให้ functions เป็น global
         window.sendToGlideAPI = sendToGlideAPI;
@@ -634,6 +739,8 @@ document.getElementById('cancelBtn').addEventListener('click', function () {
         window.tryAlternativeCloseMethods = tryAlternativeCloseMethods;
         window.tryLiffClose = tryLiffClose;
         window.showManualCloseMessage = showManualCloseMessage;
+        window.setupPWACloseListener = setupPWACloseListener;
+        window.closePWABrowser = closePWABrowser;
         
         // Global error handler
         window.addEventListener('error', function(e) {
