@@ -6,7 +6,6 @@
     <title>รับการแจ้งเตือน RakmaoEZY ผ่าน LINE</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-      /* --- โหลด Google Font: Prompt --- */
       @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
       
         * {
@@ -171,18 +170,16 @@
             margin-bottom: 8px;
             text-align: center;
         }
-        /* --- ใช้ฟอนต์ Prompt กับทุกข้อความ (รวมปุ่ม) --- */
+
 :root{
   --app-font: 'Prompt','Noto Sans Thai',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 html, body{ font-family: var(--app-font) !important; }
 
-/* ให้คอนโทรลฟอร์มและปุ่มใช้ฟอนต์เดียวกันแน่ ๆ */
 button, input, select, textarea{
   font-family: var(--app-font) !important;
 }
 
-/* เสริมความชัวร์กับคลาสหลักที่มีข้อความ */
 .confirm-btn, .cancel-btn, .message, .user-name, .user-id, .url-label, .status-info{
   font-family: var(--app-font) !important;
 }
@@ -228,11 +225,53 @@ button, input, select, textarea{
         const GLIDE_URL = 'https://ezyrfq.glide.page';
         
         let userProfile = null;
-        
-        // 🔥 แก้ปัญหา: เพิ่ม flags เพื่อป้องกันการ login ซ้ำ
         let isInitializing = false;
         let isLoggedIn = false;
         let isProcessing = false;
+        
+        // 🔥 เก็บ URL parameters ทั้งหมด (รวม rowid)
+        function saveUrlParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const params = {};
+            
+            for (const [key, value] of urlParams.entries()) {
+                params[key] = value;
+                console.log(`💾 Saved parameter: ${key} = ${value}`);
+            }
+            
+            if (Object.keys(params).length > 0) {
+                sessionStorage.setItem('savedUrlParams', JSON.stringify(params));
+                console.log('✅ All parameters saved to sessionStorage');
+            }
+            
+            return params;
+        }
+        
+        // 🔥 ดึง URL parameters ที่เก็บไว้กลับมา
+        function getUrlParameters() {
+            const saved = sessionStorage.getItem('savedUrlParams');
+            if (saved) {
+                const params = JSON.parse(saved);
+                console.log('📦 Retrieved saved parameters:', params);
+                return params;
+            }
+            return {};
+        }
+        
+        // 🔥 สร้าง URL พร้อม parameters
+        function buildUrlWithParams(baseUrl, params) {
+            if (!params || Object.keys(params).length === 0) {
+                return baseUrl;
+            }
+            
+            const url = new URL(baseUrl);
+            for (const [key, value] of Object.entries(params)) {
+                url.searchParams.set(key, value);
+            }
+            
+            console.log('🔗 Built URL with parameters:', url.toString());
+            return url.toString();
+        }
         
         function showLoading(message) {
             document.getElementById('loadingMessage').textContent = message;
@@ -292,17 +331,19 @@ button, input, select, textarea{
                 document.getElementById('redirectUrl').innerHTML = 
                     '<span class="success">✅ เชื่อมข้อมูลสำเร็จแล้ว</span>';
                 
-                // 🔥 แก้ปัญหา: redirect กลับไป Glide แทนการพยายามปิดหน้า
+                // 🔥 บันทึก flag ว่าทำสำเร็จแล้ว
+                sessionStorage.setItem('webhookSuccess', 'true');
+                
+                // 🔥 Redirect กลับพร้อม parameters
                 setTimeout(() => {
-                    redirectToGlideApp();
-                }, 1500);
+                    closeAndRedirectToGlide();
+                }, 1000);
                 
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('redirectUrl').innerHTML = 
                     `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span>`;
                 
-                // แสดงปุ่มลองใหม่
                 document.getElementById('countdownMessage').innerHTML = 
                     '<button onclick="sendToGlideAPI()" class="confirm-btn" style="margin-top: 20px;">ลองใหม่อีกครั้ง</button>';
             }
@@ -322,108 +363,148 @@ button, input, select, textarea{
             }
         }
         
-        // 🔥 แก้ปัญหา: ฟังก์ชัน redirect กลับไป Glide แทนการปิดหน้า
-        function redirectToGlideApp() {
+        // 🔥 ฟังก์ชันปิด in-app browser และ redirect กลับไป Glide พร้อม parameters
+        function closeAndRedirectToGlide() {
             try {
-                console.log('✅ Success - Redirecting to Glide App...');
+                console.log('🚀 Starting close and redirect process...');
                 
-                const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
+                // ดึง parameters ที่เก็บไว้
+                const savedParams = getUrlParameters();
                 
-                // ตรวจสอบว่าเป็น iOS standalone mode (PWA) หรือไม่
+                // สร้าง URL กลับไป Glide พร้อม parameters
+                const glideAppUrl = buildUrlWithParams(`${GLIDE_URL}/dl/818fd2`, savedParams);
+                
+                console.log('🎯 Final redirect URL:', glideAppUrl);
+                
+                // ตรวจสอบ environment
                 const isIOSStandalone = window.navigator.standalone === true;
                 const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+                const isInAppBrowser = !isIOSStandalone && !isStandalone && 
+                                      (navigator.userAgent.includes('Mobile') || navigator.userAgent.includes('iPhone'));
                 
+                console.log('Environment:', {
+                    isIOSStandalone,
+                    isStandalone,
+                    isInAppBrowser,
+                    userAgent: navigator.userAgent
+                });
+                
+                // 🔥 วิธีที่ 1: ลอง history.back() ก่อนเพื่อปิด in-app browser
+                if (window.history.length > 1 && isInAppBrowser) {
+                    console.log('📱 In-app browser detected - using history.back()');
+                    
+                    // เก็บ URL สำหรับ redirect หลัง back
+                    sessionStorage.setItem('pendingRedirect', glideAppUrl);
+                    
+                    // แสดงข้อความ
+                    document.getElementById('countdownMessage').innerHTML = 
+                        '<span class="success">✅ กำลังกลับสู่แอป...</span>';
+                    
+                    // ลอง back หลายครั้งเพื่อปิด in-app browser
+                    setTimeout(() => {
+                        window.history.go(-window.history.length + 1);
+                    }, 500);
+                    
+                    return;
+                }
+                
+                // 🔥 วิธีที่ 2: ใช้ window.location.replace() แทน href
                 if (isIOSStandalone || isStandalone) {
-                    // ถ้าเป็น PWA ให้ redirect ใน window เดิม
-                    console.log('📱 Detected PWA mode - redirecting in same window');
-                    window.location.href = glideAppUrl;
-                } else if (liff && liff.isInClient()) {
-                    // ถ้าเปิดใน LINE app
-                    console.log('💬 In LINE app - using liff.openWindow');
+                    console.log('🏠 PWA mode - using location.replace()');
+                    window.location.replace(glideAppUrl);
+                    return;
+                }
+                
+                // 🔥 วิธีที่ 3: ใช้ LIFF openWindow
+                if (typeof liff !== 'undefined' && liff.isInClient()) {
+                    console.log('💬 In LINE app - using liff.openWindow()');
                     liff.openWindow({
                         url: glideAppUrl,
                         external: false
                     });
-                } else {
-                    // External browser
-                    console.log('🌐 External browser - redirecting');
-                    window.location.href = glideAppUrl;
+                    
+                    // ลองปิด LIFF window
+                    setTimeout(() => {
+                        liff.closeWindow();
+                    }, 500);
+                    
+                    return;
                 }
                 
-                // แสดงข้อความรอ
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">✅ เสร็จสิ้น! กำลังกลับสู่แอป...</span>';
+                // 🔥 วิธีที่ 4: Fallback - ใช้ location.replace()
+                console.log('🌐 Using fallback location.replace()');
+                window.location.replace(glideAppUrl);
                 
             } catch (error) {
-                console.error('Error redirecting:', error);
+                console.error('❌ Error in closeAndRedirectToGlide:', error);
+                
+                // Fallback สุดท้าย - แสดงลิงก์ให้ผู้ใช้กด
+                const savedParams = getUrlParameters();
+                const glideAppUrl = buildUrlWithParams(`${GLIDE_URL}/dl/818fd2`, savedParams);
+                
                 document.getElementById('countdownMessage').innerHTML = 
                     '<span class="success">✅ เชื่อมข้อมูลสำเร็จแล้ว</span><br><br>' +
-                    '<a href="' + GLIDE_URL + '/dl/818fd2" class="confirm-btn" style="display: inline-block; text-decoration: none; margin-top: 15px;">กลับสู่แอป</a>';
+                    '<a href="' + glideAppUrl + '" class="confirm-btn" style="display: inline-block; text-decoration: none; margin-top: 15px;">กลับสู่แอป</a>';
             }
         }
         
-        // 🔥 แก้ปัญหา: ฟังก์ชันปิดหน้าที่ปรับปรุงแล้ว
+        // 🔥 ฟังก์ชันยกเลิก
         function forceCloseWindow() {
             console.log('🔴 Cancel button clicked');
             
-            // ลอง redirect กลับไป Glide แทนการปิดหน้า
-            const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
+            // ดึง parameters ที่เก็บไว้
+            const savedParams = getUrlParameters();
+            const glideAppUrl = buildUrlWithParams(`${GLIDE_URL}/dl/818fd2`, savedParams);
+            
             const isIOSStandalone = window.navigator.standalone === true;
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            const isInAppBrowser = !isIOSStandalone && !isStandalone;
             
-            if (isIOSStandalone || isStandalone) {
-                // PWA mode - redirect กลับ
-                window.location.href = glideAppUrl;
+            // ลอง history.back() หลายครั้ง
+            if (window.history.length > 1 && isInAppBrowser) {
+                window.history.go(-window.history.length + 1);
                 return;
             }
             
-            // ลองปิดด้วยวิธีต่างๆ
-            if (liff && liff.isInClient()) {
+            // ลอง LIFF closeWindow
+            if (typeof liff !== 'undefined' && liff.isInClient()) {
                 liff.closeWindow();
                 return;
             }
             
-            // ลอง history.back()
-            if (window.history.length > 1) {
-                window.history.back();
-                return;
-            }
-            
-            // ลอง window.close()
-            window.close();
-            
-            // ถ้าปิดไม่ได้ แสดงข้อความ
-            setTimeout(() => {
-                showLoading('กรุณาปิดหน้าต่างนี้หรือกลับไปที่แอป');
-            }, 500);
+            // Redirect กลับ
+            window.location.replace(glideAppUrl);
         }
         
-        // 🔥 แก้ปัญหา: ปรับปรุง handleLoginState เพื่อป้องกัน loop
         async function handleLoginState() {
             try {
-                // ป้องกันการเรียกซ้ำ
                 if (isProcessing) {
-                    console.log('⏳ Already processing login state, skipping...');
+                    console.log('⏳ Already processing, skipping...');
                     return false;
                 }
                 
                 isProcessing = true;
                 
                 if (!liff.isLoggedIn()) {
-                    console.log('🔐 Not logged in - redirecting to login...');
-                    showLoading('กำลังเข้าสู่ระบบ LINE...');
+                    console.log('🔐 Not logged in - saving params and redirecting...');
                     
-                    // เก็บสถานะว่ากำลัง login
+                    // 🔥 บันทึก parameters ก่อน login
+                    saveUrlParameters();
+                    
+                    showLoading('กำลังเข้าสู่ระบบ LINE...');
                     sessionStorage.setItem('isLoggingIn', 'true');
                     
-                    liff.login({ redirectUri: window.location.href });
+                    // 🔥 สร้าง redirect URI พร้อม parameters
+                    const currentUrl = new URL(window.location.href);
+                    // ลบ LIFF parameters ที่ไม่จำเป็น
+                    currentUrl.searchParams.delete('liff.state');
+                    
+                    liff.login({ redirectUri: currentUrl.toString() });
                     return false;
                 }
                 
-                // ลบ flag การ login
                 sessionStorage.removeItem('isLoggingIn');
                 
-                // ถ้า login แล้ว และยังไม่ได้โหลดโปรไฟล์
                 if (!isLoggedIn) {
                     console.log('✅ Logged in - fetching profile...');
                     showLoading('กำลังดึงข้อมูลโปรไฟล์...');
@@ -444,13 +525,16 @@ button, input, select, textarea{
         
         async function initializeLiff() {
             try {
-                // ป้องกัน initialize ซ้ำ
                 if (isInitializing) {
                     console.log('⏳ Already initializing, skipping...');
                     return;
                 }
                 
                 isInitializing = true;
+                
+                // 🔥 บันทึก parameters ทันทีที่เริ่มต้น
+                saveUrlParameters();
+                
                 showLoading('กำลังเริ่มต้น LIFF...');
                 
                 if (typeof liff === 'undefined') {
@@ -478,6 +562,15 @@ button, input, select, textarea{
         
         // Event Listeners
         document.addEventListener('DOMContentLoaded', function() {
+            // 🔥 ตรวจสอบว่ามี pending redirect หรือไม่ (กรณีกลับมาจาก history.back())
+            const pendingRedirect = sessionStorage.getItem('pendingRedirect');
+            if (pendingRedirect) {
+                console.log('🔄 Found pending redirect:', pendingRedirect);
+                sessionStorage.removeItem('pendingRedirect');
+                window.location.replace(pendingRedirect);
+                return;
+            }
+            
             // ปุ่มยืนยัน
             document.getElementById('confirmBtn').addEventListener('click', function() {
                 this.disabled = true;
@@ -493,17 +586,14 @@ button, input, select, textarea{
             initializeLiff();
         });
         
-        // 🔥 แก้ปัญหา: ปรับปรุง event listeners เพื่อป้องกัน loop
-        
-        // ใช้เฉพาะเมื่อ page เพิ่ง load เสร็จ และกลับมาจาก login
+        // ป้องกัน login loop
         let hasHandledVisibilityChange = false;
         
         document.addEventListener('visibilitychange', function() {
-            // ตรวจสอบว่ากำลัง login อยู่หรือไม่
             const isLoggingIn = sessionStorage.getItem('isLoggingIn') === 'true';
             
             if (!document.hidden && typeof liff !== 'undefined' && !hasHandledVisibilityChange && isLoggingIn) {
-                console.log('👁️ Visibility changed - checking login status...');
+                console.log('👁️ Visibility changed - checking login...');
                 hasHandledVisibilityChange = true;
                 
                 setTimeout(() => {
@@ -515,14 +605,13 @@ button, input, select, textarea{
             }
         });
         
-        // Backup event สำหรับ focus (ใช้เฉพาะเมื่อจำเป็น)
         let hasFocusHandled = false;
         
         window.addEventListener('focus', function() {
             const isLoggingIn = sessionStorage.getItem('isLoggingIn') === 'true';
             
             if (typeof liff !== 'undefined' && !hasFocusHandled && isLoggingIn) {
-                console.log('🎯 Window focused - checking login status...');
+                console.log('🎯 Window focused - checking login...');
                 hasFocusHandled = true;
                 
                 setTimeout(() => {
@@ -534,14 +623,29 @@ button, input, select, textarea{
             }
         });
         
-        // ทำให้ functions เป็น global
+        // Global functions
         window.sendToGlideAPI = sendToGlideAPI;
-        window.redirectToGlideApp = redirectToGlideApp;
+        window.closeAndRedirectToGlide = closeAndRedirectToGlide;
         window.forceCloseWindow = forceCloseWindow;
         
-        // Global error handler
+        // Error handler
         window.addEventListener('error', function(e) {
             console.error('Global Error:', e.error);
+        });
+        
+        // 🔥 Handle pageshow event (สำหรับ iOS back button)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                console.log('📄 Page restored from cache');
+                
+                // ตรวจสอบว่าทำ webhook สำเร็จแล้วหรือไม่
+                const webhookSuccess = sessionStorage.getItem('webhookSuccess');
+                if (webhookSuccess === 'true') {
+                    console.log('✅ Webhook already completed, redirecting...');
+                    sessionStorage.removeItem('webhookSuccess');
+                    closeAndRedirectToGlide();
+                }
+            }
         });
     </script>
 </body>
