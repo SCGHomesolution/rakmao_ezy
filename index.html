@@ -229,6 +229,11 @@ button, input, select, textarea{
         
         let userProfile = null;
         
+        // 🔥 แก้ปัญหา: เพิ่ม flags เพื่อป้องกันการ login ซ้ำ
+        let isInitializing = false;
+        let isLoggedIn = false;
+        let isProcessing = false;
+        
         function showLoading(message) {
             document.getElementById('loadingMessage').textContent = message;
             document.getElementById('loading').style.display = 'block';
@@ -239,324 +244,235 @@ button, input, select, textarea{
         function showUserInfo(profile) {
             userProfile = profile;
             
-            // ดึงค่า rowid จาก URL เพื่อแสดงให้ผู้ใช้เห็น
-            const urlParams = new URLSearchParams(window.location.search);
-            const rowId = urlParams.get('rowid') || 'DT-ZC65iTlGfaqW9Ix391g';
+            document.getElementById('profileImage').src = profile.pictureUrl || 'https://via.placeholder.com/100';
+            document.getElementById('userName').textContent = profile.displayName;
+            document.getElementById('userId').textContent = `LINE ID: ${profile.userId}`;
             
-            // แสดงข้อมูลผู้ใช้
-            document.getElementById('profileImage').src = profile.pictureUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%23ddd"/><text x="50" y="55" font-family="Arial" font-size="14" fill="%23999" text-anchor="middle">No Image</text></svg>';
-            document.getElementById('userName').textContent = profile.displayName || 'ไม่ระบุชื่อ';
-            document.getElementById('userId').innerHTML = `User ID: ${profile.userId}<br><small style="color: #999; font-size: 12px;">Row ID: ${rowId}</small>`;
-            
-            // ซ่อน loading และแสดง user info
             document.getElementById('loading').style.display = 'none';
             document.getElementById('userInfo').style.display = 'block';
             document.getElementById('redirectInfo').style.display = 'none';
         }
         
         function showRedirectInfo(message) {
-            document.getElementById('redirectUrl').textContent = message;
+            document.getElementById('redirectMessage').textContent = message;
             document.getElementById('loading').style.display = 'none';
             document.getElementById('userInfo').style.display = 'none';
             document.getElementById('redirectInfo').style.display = 'block';
         }
         
-        function redirectToApp() {
-            if (!userProfile) {
-                document.getElementById('loadingMessage').innerHTML = '<span class="error">ไม่พบข้อมูลผู้ใช้</span>';
-                return;
-            }
-            
-            // แสดงหน้า redirect info
-            showRedirectInfo('กำลังเชื่อมข้อมูลกับ Glide App...');
-            
-            // เรียก API ไปยัง Glide
-            sendToGlideAPI();
-        }
-        
         async function sendToGlideAPI() {
             try {
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="redirecting">กำลังส่งข้อมูลผู้ใช้...</span>';
+                if (!userProfile) {
+                    throw new Error('ไม่พบข้อมูลผู้ใช้');
+                }
                 
-                const userId = userProfile.userId || '';
-                const userName = userProfile.displayName || '';
-                const profileImg = userProfile.pictureUrl || '';
+                showRedirectInfo('กำลังส่งข้อมูลไปยัง Glide...');
                 
-                // ดึงค่า rowid จาก URL parameter
-                const urlParams = new URLSearchParams(window.location.search);
-                const rowId = urlParams.get('rowid') || 'DT-ZC65iTlGfaqW9Ix391g'; // fallback ถ้าไม่มี rowid
+                const data = {
+                    userId: userProfile.userId,
+                    displayName: userProfile.displayName,
+                    pictureUrl: userProfile.pictureUrl || '',
+                    statusMessage: userProfile.statusMessage || ''
+                };
                 
-                console.log('Using Row ID:', rowId);
+                const glideWebhookUrl = `https://rakmao-ezy-webhook.glide.page/webhooks/rakmao-ezy-webhook/cYxFpIwJa4k9YfOJ`;
                 
-                // สร้าง API payload
-               const apiPayload = {
-  appID: "wFtUtanipzHwHsjbHCij",
-  mutations: [
-    {
-      kind: "set-columns-in-row",
-      tableName: "native-table-Iaj8OYHgkSlTKB831ukh", // <-- เปลี่ยนตามสเปกใหม่
-      columnValues: {
-        "hbHy1": userId,       // <-- line_id
-        "7TucJ": userName,   // <-- line_name (คีย์ขึ้นต้นด้วยเลข ต้องใส่เครื่องหมายคำพูด)
-        "rzbcg": profileImg    // <-- line_img
-      },
-      rowID: rowId           // <-- ใช้ค่า rowid จาก URL (เหมือนเดิม)
-    }
-  ]
-};
+                document.getElementById('redirectUrl').textContent = `กำลังส่งข้อมูล: ${userProfile.displayName}`;
                 
-                // ส่ง API request
-                const response = await fetch('https://api.glideapp.io/api/function/mutateTables', {
+                const response = await fetch(glideWebhookUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ac38ea2f-fc70-4c94-a2c8-7a57783484e4'
-                    },
-                    body: JSON.stringify(apiPayload)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
                 
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('API Success:', result);
-                    
-                    document.getElementById('countdownMessage').innerHTML = 
-                        '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
-                    
-                    // รอ 1 วินาที แล้วปิดแบบ aggressive
-                    setTimeout(() => {
-                        forceCloseWindow();
-                    }, 1000);
-                    
-                } else {
-                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
+                document.getElementById('redirectUrl').innerHTML = 
+                    '<span class="success">✅ เชื่อมข้อมูลสำเร็จแล้ว</span>';
+                
+                // 🔥 แก้ปัญหา: redirect กลับไป Glide แทนการพยายามปิดหน้า
+                setTimeout(() => {
+                    redirectToGlideApp();
+                }, 1500);
+                
             } catch (error) {
-                console.error('API Error:', error);
-                document.getElementById('countdownMessage').innerHTML = 
-                    `<span class="error">❌ เกิดข้อผิดพลาด: ${error.message}</span>`;
+                console.error('Error:', error);
+                document.getElementById('redirectUrl').innerHTML = 
+                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span>`;
                 
                 // แสดงปุ่มลองใหม่
-                setTimeout(() => {
-                    document.getElementById('countdownMessage').innerHTML = 
-                        '<button onclick="sendToGlideAPI()" style="background:#dc3545;color:white;border:none;padding:10px 20px;border-radius:5px;cursor:pointer;">ลองใหม่อีกครั้ง</button>';
-                }, 3000);
-            }
-        }
-        
-        async function forceCloseWindow() {
-            console.log('🔴 forceCloseWindow: Starting close sequence...');
-            
-            // 1) ปิดใน LINE app โดยตรง (วิธีที่ดีที่สุดสำหรับ LIFF)
-            try {
-                if (typeof liff !== 'undefined') {
-                    console.log('✅ LIFF is available');
-                    
-                    // ถ้า LIFF ยังไม่ได้ init ให้ init ก่อน
-                    if (!liff._initialized) {
-                        console.log('⚠️ LIFF not initialized, initializing...');
-                        await liff.init({ liffId: LIFF_ID });
-                    }
-                    
-                    // ตรวจสอบว่าอยู่ใน LINE app หรือไม่
-                    if (liff.isInClient()) {
-                        console.log('✅ In LINE app, using liff.closeWindow()');
-                        liff.closeWindow();
-                        
-                        // แสดงข้อความสำรองกรณีที่ยังไม่ปิด
-                        setTimeout(() => {
-                            console.log('⚠️ Window still open after 2 seconds');
-                            showClosingMessage();
-                        }, 2000);
-                        return;
-                    } else {
-                        console.log('⚠️ Not in LINE app, trying external browser methods');
-                    }
-                }
-            } catch (e) {
-                console.error('❌ LIFF close failed:', e);
-            }
-
-            // 2) สำหรับ External Browser - ลองปิดด้วยวิธีต่างๆ
-            try {
-                console.log('🔹 Attempting window.close()');
-                window.close();
-                
-                // ถ้าปิดไม่ได้ หลัง 1 วินาที ให้แสดงข้อความ
-                setTimeout(() => {
-                    if (!document.hidden) {
-                        console.log('⚠️ Cannot close window automatically');
-                        showClosingMessage();
-                    }
-                }, 1000);
-                return;
-            } catch (e) {
-                console.error('❌ window.close() failed:', e);
-            }
-
-            // 3) ถ้าปิดไม่ได้ทุกวิธี แสดงข้อความให้ผู้ใช้ปิดเอง
-            showClosingMessage();
-        }
-        
-        function showClosingMessage() {
-            console.log('📌 Showing manual close message');
-            
-            // ถ้าอยู่ในหน้า redirect info
-            const redirectInfo = document.getElementById('redirectInfo');
-            if (redirectInfo && redirectInfo.style.display !== 'none') {
                 document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">✅ เสร็จสิ้น!</span><br><br>' +
-                    '<span style="color: #666; font-size: 14px;">กรุณาปิดหน้าต่างนี้</span>';
-            } else {
-                // ถ้าอยู่หน้าอื่น แสดงข้อความในหน้า loading
-                document.getElementById('loading').style.display = 'block';
-                document.getElementById('userInfo').style.display = 'none';
-                document.getElementById('redirectInfo').style.display = 'none';
-                document.getElementById('loadingMessage').innerHTML = 
-                    '<span class="success">✅ เสร็จสิ้น!</span><br><br>' +
-                    '<span style="color: #666;">กรุณาปิดหน้าต่างนี้</span>';
+                    '<button onclick="sendToGlideAPI()" class="confirm-btn" style="margin-top: 20px;">ลองใหม่อีกครั้ง</button>';
             }
         }
-
         
-        function goBackToGlide() {
+        async function redirectToApp() {
             try {
-                console.log('Attempting to go back to Glide...');
-                
-                // วิธีที่ 1: ลองใช้ history.back() ก่อน
-                if (window.history.length > 1) {
-                    console.log('Using history.back()');
-                    window.history.back();
-                    return;
+                if (!userProfile) {
+                    throw new Error('ไม่พบข้อมูลผู้ใช้');
                 }
                 
-                // วิธีที่ 2: ลองปิด LIFF window
-                if (typeof liff !== 'undefined' && liff.isInClient()) {
-                    console.log('Using liff.closeWindow()');
-                    liff.closeWindow();
-                    return;
-                }
-                
-                // วิธีที่ 3: เปิด Glide App ใหม่
-                console.log('Opening new Glide App window');
-                const glideUrl = `${GLIDE_URL}/dl/818fd2`;
-                
-                if (typeof liff !== 'undefined' && liff.isInClient()) {
-                    liff.openWindow({
-                        url: glideUrl,
-                        external: false
-                    });
-                } else {
-                    window.location.href = glideUrl;
-                }
-                
-                // แสดงข้อความให้ผู้ใช้รู้
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">กำลังเปิดแอป... หากไม่เปิดให้ปิดหน้าต่างนี้เอง</span>';
+                await sendToGlideAPI();
                 
             } catch (error) {
-                console.error('Error going back to Glide:', error);
-                
-                // แสดงข้อความสำรอง
-                document.getElementById('countdownMessage').innerHTML = `
-                    <span class="success">เชื่อมข้อมูลสำเร็จแล้ว</span><br><br>
-                    <span style="color: #666; font-size: 14px;">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์<br>หรือปิดหน้าต่างนี้</span>
-                `;
+                console.error('Error:', error);
+                showRedirectInfo(`เกิดข้อผิดพลาด: ${error.message}`);
             }
         }
         
-        function openGlideApp() {
+        // 🔥 แก้ปัญหา: ฟังก์ชัน redirect กลับไป Glide แทนการปิดหน้า
+        function redirectToGlideApp() {
             try {
-                console.log('Opening Glide App...');
+                console.log('✅ Success - Redirecting to Glide App...');
+                
                 const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
                 
-                if (liff && liff.isInClient()) {
-                    // ใช้ liff.openWindow() เพื่อเปิด Glide App
+                // ตรวจสอบว่าเป็น iOS standalone mode (PWA) หรือไม่
+                const isIOSStandalone = window.navigator.standalone === true;
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+                
+                if (isIOSStandalone || isStandalone) {
+                    // ถ้าเป็น PWA ให้ redirect ใน window เดิม
+                    console.log('📱 Detected PWA mode - redirecting in same window');
+                    window.location.href = glideAppUrl;
+                } else if (liff && liff.isInClient()) {
+                    // ถ้าเปิดใน LINE app
+                    console.log('💬 In LINE app - using liff.openWindow');
                     liff.openWindow({
                         url: glideAppUrl,
                         external: false
                     });
                 } else {
-                    // สำหรับ external browser
-                    window.open(glideAppUrl, '_blank');
+                    // External browser
+                    console.log('🌐 External browser - redirecting');
+                    window.location.href = glideAppUrl;
                 }
                 
-                // แล้วลองกลับหน้าก่อน
-                setTimeout(() => {
-                    closeLiff();
-                }, 1000);
+                // แสดงข้อความรอ
+                document.getElementById('countdownMessage').innerHTML = 
+                    '<span class="success">✅ เสร็จสิ้น! กำลังกลับสู่แอป...</span>';
                 
             } catch (error) {
-                console.error('Error opening Glide App:', error);
+                console.error('Error redirecting:', error);
+                document.getElementById('countdownMessage').innerHTML = 
+                    '<span class="success">✅ เชื่อมข้อมูลสำเร็จแล้ว</span><br><br>' +
+                    '<a href="' + GLIDE_URL + '/dl/818fd2" class="confirm-btn" style="display: inline-block; text-decoration: none; margin-top: 15px;">กลับสู่แอป</a>';
             }
         }
         
-        function closeLiff() {
-            try {
-                // ตรวจสอบว่ามี history ย้อนกลับได้หรือไม่
-                if (window.history.length > 1) {
-                    console.log('Going back to previous page...');
-                    window.history.back();
-                    return;
-                }
-                
-                // ลองใช้ liff.closeWindow() สำหรับ nested LIFF
-                if (liff && liff.isInClient()) {
-                    console.log('Attempting to close nested LIFF...');
-                    liff.closeWindow();
-                    return;
-                }
-                
-                // ถ้าไม่ได้ทั้งหมด แสดงข้อความ
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์</span>';
-                    
-            } catch (error) {
-                console.error('Error closing LIFF:', error);
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์</span>';
+        // 🔥 แก้ปัญหา: ฟังก์ชันปิดหน้าที่ปรับปรุงแล้ว
+        function forceCloseWindow() {
+            console.log('🔴 Cancel button clicked');
+            
+            // ลอง redirect กลับไป Glide แทนการปิดหน้า
+            const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
+            const isIOSStandalone = window.navigator.standalone === true;
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            
+            if (isIOSStandalone || isStandalone) {
+                // PWA mode - redirect กลับ
+                window.location.href = glideAppUrl;
+                return;
             }
+            
+            // ลองปิดด้วยวิธีต่างๆ
+            if (liff && liff.isInClient()) {
+                liff.closeWindow();
+                return;
+            }
+            
+            // ลอง history.back()
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            
+            // ลอง window.close()
+            window.close();
+            
+            // ถ้าปิดไม่ได้ แสดงข้อความ
+            setTimeout(() => {
+                showLoading('กรุณาปิดหน้าต่างนี้หรือกลับไปที่แอป');
+            }, 500);
         }
         
+        // 🔥 แก้ปัญหา: ปรับปรุง handleLoginState เพื่อป้องกัน loop
         async function handleLoginState() {
             try {
+                // ป้องกันการเรียกซ้ำ
+                if (isProcessing) {
+                    console.log('⏳ Already processing login state, skipping...');
+                    return false;
+                }
+                
+                isProcessing = true;
+                
                 if (!liff.isLoggedIn()) {
+                    console.log('🔐 Not logged in - redirecting to login...');
                     showLoading('กำลังเข้าสู่ระบบ LINE...');
-                    // ส่ง URL เต็มพร้อม parameters เพื่อให้ redirect กลับมาที่เดิม
+                    
+                    // เก็บสถานะว่ากำลัง login
+                    sessionStorage.setItem('isLoggingIn', 'true');
+                    
                     liff.login({ redirectUri: window.location.href });
                     return false;
                 }
                 
-                showLoading('กำลังดึงข้อมูลโปรไฟล์...');
-                const profile = await liff.getProfile();
-                showUserInfo(profile);
+                // ลบ flag การ login
+                sessionStorage.removeItem('isLoggingIn');
+                
+                // ถ้า login แล้ว และยังไม่ได้โหลดโปรไฟล์
+                if (!isLoggedIn) {
+                    console.log('✅ Logged in - fetching profile...');
+                    showLoading('กำลังดึงข้อมูลโปรไฟล์...');
+                    
+                    const profile = await liff.getProfile();
+                    isLoggedIn = true;
+                    showUserInfo(profile);
+                }
+                
                 return true;
                 
             } catch (error) {
                 throw error;
+            } finally {
+                isProcessing = false;
             }
         }
         
         async function initializeLiff() {
             try {
+                // ป้องกัน initialize ซ้ำ
+                if (isInitializing) {
+                    console.log('⏳ Already initializing, skipping...');
+                    return;
+                }
+                
+                isInitializing = true;
                 showLoading('กำลังเริ่มต้น LIFF...');
                 
-                // ตรวจสอบว่า LIFF SDK โหลดแล้วหรือไม่
                 if (typeof liff === 'undefined') {
                     throw new Error('LIFF SDK ไม่สามารถโหลดได้');
                 }
                 
+                console.log('🚀 Initializing LIFF...');
                 await liff.init({ liffId: LIFF_ID });
+                
+                console.log('✅ LIFF initialized');
                 await handleLoginState();
                 
             } catch (error) {
-                console.error('LIFF Error:', error);
+                console.error('❌ LIFF Error:', error);
                 document.getElementById('loading').style.display = 'block';
                 document.getElementById('userInfo').style.display = 'none';
                 document.getElementById('redirectInfo').style.display = 'none';
                 document.getElementById('loadingMessage').innerHTML = 
-                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>กรุณาลองใหม่อีกครั้ง`;
+                    `<span class="error">เกิดข้อผิดพลาด: ${error.message}</span><br><br>` +
+                    `<button onclick="location.reload()" class="confirm-btn">ลองใหม่อีกครั้ง</button>`;
+            } finally {
+                isInitializing = false;
             }
         }
         
@@ -568,42 +484,59 @@ button, input, select, textarea{
                 redirectToApp();
             });
             
-           // ปุ่มยกเลิก (ปิดหน้าต่างทันที)
-document.getElementById('cancelBtn').addEventListener('click', function () {
-  forceCloseWindow();
-});
+            // ปุ่มยกเลิก
+            document.getElementById('cancelBtn').addEventListener('click', function() {
+                forceCloseWindow();
+            });
             
             // เริ่มต้น LIFF
             initializeLiff();
         });
         
-        // Handle page visibility change (สำหรับกรณีที่กลับมาจาก login)
+        // 🔥 แก้ปัญหา: ปรับปรุง event listeners เพื่อป้องกัน loop
+        
+        // ใช้เฉพาะเมื่อ page เพิ่ง load เสร็จ และกลับมาจาก login
+        let hasHandledVisibilityChange = false;
+        
         document.addEventListener('visibilitychange', function() {
-            if (!document.hidden && typeof liff !== 'undefined') {
+            // ตรวจสอบว่ากำลัง login อยู่หรือไม่
+            const isLoggingIn = sessionStorage.getItem('isLoggingIn') === 'true';
+            
+            if (!document.hidden && typeof liff !== 'undefined' && !hasHandledVisibilityChange && isLoggingIn) {
+                console.log('👁️ Visibility changed - checking login status...');
+                hasHandledVisibilityChange = true;
+                
                 setTimeout(() => {
-                    if (liff.isLoggedIn()) {
+                    if (liff.isLoggedIn() && !isLoggedIn) {
                         handleLoginState();
                     }
+                    hasHandledVisibilityChange = false;
                 }, 1000);
             }
         });
         
-        // Handle window focus (backup สำหรับกรณีที่กลับมาจาก login)
+        // Backup event สำหรับ focus (ใช้เฉพาะเมื่อจำเป็น)
+        let hasFocusHandled = false;
+        
         window.addEventListener('focus', function() {
-            if (typeof liff !== 'undefined') {
+            const isLoggingIn = sessionStorage.getItem('isLoggingIn') === 'true';
+            
+            if (typeof liff !== 'undefined' && !hasFocusHandled && isLoggingIn) {
+                console.log('🎯 Window focused - checking login status...');
+                hasFocusHandled = true;
+                
                 setTimeout(() => {
-                    if (liff.isLoggedIn()) {
+                    if (liff.isLoggedIn() && !isLoggedIn) {
                         handleLoginState();
                     }
-                }, 1000);
+                    hasFocusHandled = false;
+                }, 1500);
             }
         });
         
         // ทำให้ functions เป็น global
-        window.closeLiff = closeLiff;
-        window.openGlideApp = openGlideApp;
         window.sendToGlideAPI = sendToGlideAPI;
-        window.goBackToGlide = goBackToGlide;
+        window.redirectToGlideApp = redirectToGlideApp;
         window.forceCloseWindow = forceCloseWindow;
         
         // Global error handler
