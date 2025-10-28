@@ -321,12 +321,12 @@ button, input, select, textarea{
                     console.log('API Success:', result);
                     
                     document.getElementById('countdownMessage').innerHTML = 
-                        '<span class="success">✅ เชื่อมข้อมูลสำเร็จ!</span>';
+                        '<span class="success">✅ เชื่อมข้อมูลสำเร็จ! กำลังปิดหน้า...</span>';
                     
-                    // รอ 1 วินาที แล้วปิดแบบ aggressive
+                    // 🔥 ปิดหน้าทันที
                     setTimeout(() => {
-                        forceCloseWindow();
-                    }, 1000);
+                        closeInAppBrowser();
+                    }, 500);
                     
                 } else {
                     throw new Error(`API Error: ${response.status} ${response.statusText}`);
@@ -347,177 +347,87 @@ button, input, select, textarea{
         
         async function forceCloseWindow() {
             console.log('🔴 forceCloseWindow: Starting close sequence...');
+            closeInAppBrowser();
+        }
+        
+        function closeInAppBrowser() {
+            console.log('🚪 Attempting to close in-app browser...');
             
-            // 1) ปิดใน LINE app โดยตรง (วิธีที่ดีที่สุดสำหรับ LIFF)
+            // 🔥 วิธีที่ 1: ใช้ history.back() เพื่อกลับไปหน้า web app เดิม
+            if (window.history.length > 1) {
+                console.log('✅ Using history.back() to close');
+                window.history.back();
+                
+                // รอดูว่าปิดสำเร็จหรือไม่
+                setTimeout(() => {
+                    if (!document.hidden) {
+                        console.log('⚠️ history.back() failed, trying other methods');
+                        tryAlternativeCloseMethods();
+                    }
+                }, 1000);
+                return;
+            }
+            
+            // ถ้า history.back() ใช้ไม่ได้ ลองวิธีอื่น
+            tryAlternativeCloseMethods();
+        }
+        
+        function tryAlternativeCloseMethods() {
+            console.log('🔄 Trying alternative close methods...');
+            
+            // วิธีที่ 2: ลอง window.close()
+            try {
+                window.close();
+                console.log('✅ Called window.close()');
+                
+                // รอดูว่าปิดสำเร็จหรือไม่
+                setTimeout(() => {
+                    if (!document.hidden) {
+                        console.log('⚠️ window.close() failed, trying LIFF');
+                        tryLiffClose();
+                    }
+                }, 1000);
+            } catch (e) {
+                console.error('❌ window.close() error:', e);
+                tryLiffClose();
+            }
+        }
+        
+        async function tryLiffClose() {
+            // วิธีที่ 3: ลอง liff.closeWindow()
             try {
                 if (typeof liff !== 'undefined') {
                     console.log('✅ LIFF is available');
                     
-                    // ถ้า LIFF ยังไม่ได้ init ให้ init ก่อน
                     if (!liff._initialized) {
                         console.log('⚠️ LIFF not initialized, initializing...');
                         await liff.init({ liffId: LIFF_ID });
                     }
                     
-                    // ตรวจสอบว่าอยู่ใน LINE app หรือไม่
                     if (liff.isInClient()) {
                         console.log('✅ In LINE app, using liff.closeWindow()');
                         liff.closeWindow();
-                        
-                        // แสดงข้อความสำรองกรณีที่ยังไม่ปิด
-                        setTimeout(() => {
-                            console.log('⚠️ Window still open after 2 seconds');
-                            showClosingMessage();
-                        }, 2000);
                         return;
-                    } else {
-                        console.log('⚠️ Not in LINE app, trying external browser methods');
                     }
                 }
             } catch (e) {
                 console.error('❌ LIFF close failed:', e);
             }
-
-            // 2) สำหรับ External Browser - ลองปิดด้วยวิธีต่างๆ
-            try {
-                console.log('🔹 Attempting window.close()');
-                window.close();
-                
-                // ถ้าปิดไม่ได้ หลัง 1 วินาที ให้แสดงข้อความ
-                setTimeout(() => {
-                    if (!document.hidden) {
-                        console.log('⚠️ Cannot close window automatically');
-                        showClosingMessage();
-                    }
-                }, 1000);
-                return;
-            } catch (e) {
-                console.error('❌ window.close() failed:', e);
-            }
-
-            // 3) ถ้าปิดไม่ได้ทุกวิธี แสดงข้อความให้ผู้ใช้ปิดเอง
-            showClosingMessage();
-        }
-        
-        function showClosingMessage() {
-            console.log('📌 Showing manual close message');
             
-            // ถ้าอยู่ในหน้า redirect info
-            const redirectInfo = document.getElementById('redirectInfo');
-            if (redirectInfo && redirectInfo.style.display !== 'none') {
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">✅ เสร็จสิ้น!</span><br><br>' +
-                    '<span style="color: #666; font-size: 14px;">กรุณาปิดหน้าต่างนี้</span>';
-            } else {
-                // ถ้าอยู่หน้าอื่น แสดงข้อความในหน้า loading
-                document.getElementById('loading').style.display = 'block';
-                document.getElementById('userInfo').style.display = 'none';
-                document.getElementById('redirectInfo').style.display = 'none';
-                document.getElementById('loadingMessage').innerHTML = 
-                    '<span class="success">✅ เสร็จสิ้น!</span><br><br>' +
-                    '<span style="color: #666;">กรุณาปิดหน้าต่างนี้</span>';
-            }
+            // ถ้าทุกวิธีไม่ได้ แสดงข้อความให้ผู้ใช้ปิดเอง
+            showManualCloseMessage();
+        }
+        
+        function showManualCloseMessage() {
+            console.log('📌 Showing manual close instruction');
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+            document.getElementById('redirectInfo').style.display = 'none';
+            document.getElementById('loadingMessage').innerHTML = 
+                '<span class="success">✅ เชื่อมข้อมูลสำเร็จแล้ว!</span><br><br>' +
+                '<span style="font-size: 16px;">กรุณากดปุ่ม <strong>✕</strong> ที่มุมซ้ายบน<br>เพื่อปิดหน้านี้</span>';
         }
 
-        
-        function goBackToGlide() {
-            try {
-                console.log('Attempting to go back to Glide...');
-                
-                // วิธีที่ 1: ลองใช้ history.back() ก่อน
-                if (window.history.length > 1) {
-                    console.log('Using history.back()');
-                    window.history.back();
-                    return;
-                }
-                
-                // วิธีที่ 2: ลองปิด LIFF window
-                if (typeof liff !== 'undefined' && liff.isInClient()) {
-                    console.log('Using liff.closeWindow()');
-                    liff.closeWindow();
-                    return;
-                }
-                
-                // วิธีที่ 3: เปิด Glide App ใหม่
-                console.log('Opening new Glide App window');
-                const glideUrl = `${GLIDE_URL}/dl/818fd2`;
-                
-                if (typeof liff !== 'undefined' && liff.isInClient()) {
-                    liff.openWindow({
-                        url: glideUrl,
-                        external: false
-                    });
-                } else {
-                    window.location.href = glideUrl;
-                }
-                
-                // แสดงข้อความให้ผู้ใช้รู้
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">กำลังเปิดแอป... หากไม่เปิดให้ปิดหน้าต่างนี้เอง</span>';
-                
-            } catch (error) {
-                console.error('Error going back to Glide:', error);
-                
-                // แสดงข้อความสำรอง
-                document.getElementById('countdownMessage').innerHTML = `
-                    <span class="success">เชื่อมข้อมูลสำเร็จแล้ว</span><br><br>
-                    <span style="color: #666; font-size: 14px;">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์<br>หรือปิดหน้าต่างนี้</span>
-                `;
-            }
-        }
-        
-        function openGlideApp() {
-            try {
-                console.log('Opening Glide App...');
-                const glideAppUrl = `${GLIDE_URL}/dl/818fd2`;
-                
-                if (liff && liff.isInClient()) {
-                    // ใช้ liff.openWindow() เพื่อเปิด Glide App
-                    liff.openWindow({
-                        url: glideAppUrl,
-                        external: false
-                    });
-                } else {
-                    // สำหรับ external browser
-                    window.open(glideAppUrl, '_blank');
-                }
-                
-                // แล้วลองกลับหน้าก่อน
-                setTimeout(() => {
-                    closeLiff();
-                }, 1000);
-                
-            } catch (error) {
-                console.error('Error opening Glide App:', error);
-            }
-        }
-        
-        function closeLiff() {
-            try {
-                // ตรวจสอบว่ามี history ย้อนกลับได้หรือไม่
-                if (window.history.length > 1) {
-                    console.log('Going back to previous page...');
-                    window.history.back();
-                    return;
-                }
-                
-                // ลองใช้ liff.closeWindow() สำหรับ nested LIFF
-                if (liff && liff.isInClient()) {
-                    console.log('Attempting to close nested LIFF...');
-                    liff.closeWindow();
-                    return;
-                }
-                
-                // ถ้าไม่ได้ทั้งหมด แสดงข้อความ
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์</span>';
-                    
-            } catch (error) {
-                console.error('Error closing LIFF:', error);
-                document.getElementById('countdownMessage').innerHTML = 
-                    '<span class="success">กรุณากดปุ่ม "< กลับ" บนเบราว์เซอร์</span>';
-            }
-        }
         
         async function handleLoginState() {
             try {
@@ -688,7 +598,7 @@ button, input, select, textarea{
             
            // ปุ่มยกเลิก (ปิดหน้าต่างทันที)
 document.getElementById('cancelBtn').addEventListener('click', function () {
-  forceCloseWindow();
+  closeInAppBrowser();
 });
             
             // เริ่มต้น LIFF
@@ -718,11 +628,12 @@ document.getElementById('cancelBtn').addEventListener('click', function () {
         });
         
         // ทำให้ functions เป็น global
-        window.closeLiff = closeLiff;
-        window.openGlideApp = openGlideApp;
         window.sendToGlideAPI = sendToGlideAPI;
-        window.goBackToGlide = goBackToGlide;
         window.forceCloseWindow = forceCloseWindow;
+        window.closeInAppBrowser = closeInAppBrowser;
+        window.tryAlternativeCloseMethods = tryAlternativeCloseMethods;
+        window.tryLiffClose = tryLiffClose;
+        window.showManualCloseMessage = showManualCloseMessage;
         
         // Global error handler
         window.addEventListener('error', function(e) {
